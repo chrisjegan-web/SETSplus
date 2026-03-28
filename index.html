@@ -15080,6 +15080,7 @@ ${shareText}
             if (!currentExercises) return [];
             
             const newPRs = [];
+            const personalRecords = getPersonalRecords();
             
             currentExercises.forEach(ex => {
                 if (ex.isBodyweight) return; // Skip bodyweight
