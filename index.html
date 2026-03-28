@@ -730,15 +730,21 @@
             </div>
 
             <!-- Rest Timer Banner (shows when resting) -->
-            <div id="restTimerBanner" style="display: none; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; margin: 16px; border-radius: 16px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; opacity: 0.85;">Rest Period</div>
-                <div id="restTimerDisplay" style="font-size: 56px; font-weight: 800; margin-bottom: 12px; font-family: 'Outfit', monospace;">3:00</div>
-                <div id="restTimerReason" style="font-size: 12px; opacity: 0.9; margin-bottom: 16px; line-height: 1.4;"></div>
-                <div style="display: flex; gap: 8px; justify-content: center; margin-bottom: 12px;">
-                    <button onclick="addRestTime(-15)" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer;">-15s</button>
-                    <button onclick="addRestTime(15)" style="background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer;">+15s</button>
+            <div id="restTimerBanner" style="display: none; position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 12px 20px 20px; z-index: 1000; box-shadow: 0 -4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                    <div>
+                        <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.8; margin-bottom: 2px;">Rest Period</div>
+                        <div id="restTimerReason" style="font-size: 11px; opacity: 0.75; max-width: 160px; line-height: 1.3;"></div>
+                    </div>
+                    <div id="restTimerDisplay" style="font-size: 42px; font-weight: 800; font-family: 'Outfit', monospace; flex-shrink: 0;">3:00</div>
+                    <div style="display: flex; flex-direction: column; gap: 6px; align-items: flex-end;">
+                        <div style="display: flex; gap: 6px;">
+                            <button onclick="addRestTime(-15)" style="background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">-15s</button>
+                            <button onclick="addRestTime(15)" style="background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: white; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">+15s</button>
+                        </div>
+                        <button onclick="skipRest()" style="background: white; border: none; color: #667eea; padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; width: 100%;">Skip</button>
+                    </div>
                 </div>
-                <button onclick="skipRest()" style="background: white; border: none; color: #667eea; padding: 10px 28px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">Skip Rest</button>
             </div>
 
             <div class="content pb" id="exerciseList"></div>
@@ -3750,6 +3756,71 @@
             { name: 'Wall Angels', target: 'Integrated Shoulder', duration: 45, why: 'This dynamic stretch resets shoulder mechanics after being locked in pressing positions. It reinforces proper scapular rhythm and activates postural muscles.', instructions: ['Stand with back flat against wall', 'Position arms at 90° (goal post), touching wall', 'Slide arms slowly up overhead, maintain wall contact', 'Slide back down with control', 'Perform 10-12 slow, controlled repetitions'] }
         ];
 
+        // ═══════════════════════════════════════════════════════════════════════
+        // STRETCH POOL — Individual reviewed stretches organised by muscle category
+        // Used by: custom workout routing, preset variety injection, history tracking
+        // All stretches: 45-60s holds, 5 instructions, evidence-based why text
+        // ═══════════════════════════════════════════════════════════════════════
+
+        // ── PRESET STRETCH VARIETY SYSTEM ───────────────────────────────────────
+        // Tracks how many times each preset workout type has been stretched.
+        // Every 3rd session, 2 stretches in the preset routine are rotated to
+        // fresh alternatives from the stretchPool, preventing boredom.
+
+        function getWorkoutStretchCounts() {
+            try {
+                return JSON.parse(localStorage.getItem('setsplus_stretch_counts') || '{}');
+            } catch { return {}; }
+        }
+
+        function incrementWorkoutStretchCount(workoutType) {
+            try {
+                const counts = getWorkoutStretchCounts();
+                counts[workoutType] = (counts[workoutType] || 0) + 1;
+                localStorage.setItem('setsplus_stretch_counts', JSON.stringify(counts));
+            } catch {}
+        }
+
+        // Which stretchPool categories to rotate into each preset routine
+        const presetVariantCategories = {
+            'chest':      ['Chest', 'Triceps'],
+            'back':       ['Lats', 'Mid Back'],
+            'legs':       ['Quads', 'Hamstrings'],
+            'shoulders':  ['Shoulders', 'Rear Delts'],
+            'fullbody':   ['Quads', 'Upper Back'],
+            'upper':      ['Chest', 'Lats'],
+            'lower':      ['Quads', 'Glutes'],
+            'push':       ['Chest', 'Triceps'],
+            'pull':       ['Lats', 'Mid Back']
+        };
+
+        function getVariedPresetRoutine(workoutType, baseRoutine) {
+            const counts = getWorkoutStretchCounts();
+            const count = counts[workoutType] || 0;
+            // Every 3rd session inject fresh alternatives from the pool
+            if (count > 0 && count % 3 === 0) {
+                const cats = presetVariantCategories[workoutType] || [];
+                if (cats.length === 0) return baseRoutine;
+                const history = getStretchHistory();
+                const varied = [...baseRoutine];
+                cats.forEach((cat, i) => {
+                    const pool = stretchPool[cat];
+                    if (!pool) return;
+                    // Score each alternative by recency — prefer least recently shown
+                    const scored = pool
+                        .map(s => ({ stretch: s, score: getStretchScore(s.name, history) }))
+                        .sort((a, b) => b.score - a.score);
+                    const best = scored[0];
+                    const replaceIdx = i + 2; // Rotate positions 2 and 3 (middle of routine)
+                    if (best && replaceIdx < varied.length && best.stretch.name !== varied[replaceIdx].name) {
+                        varied[replaceIdx] = best.stretch;
+                    }
+                });
+                return varied;
+            }
+            return baseRoutine;
+        }
+
         const meals = [
             { id: 1, name: 'Grilled Chicken Power Bowl', description: 'Chicken breast, sweet potato, broccoli, olive oil', protein: 42, carbs: 45, fat: 8, calories: 410 },
             { id: 2, name: 'Protein Smoothie Bowl', description: 'Whey protein, banana, berries, oats, almond butter', protein: 45, carbs: 52, fat: 12, calories: 480 },
@@ -3948,93 +4019,93 @@
         
         const warmupSuggestions = {
             chest: {
-                title: 'Chest & Triceps Warm-up',
-                cardio: '5 min light cardio (bike, rowing, or jumping jacks)',
+                title: 'Smart Chest & Triceps Warmup',
+                cardio: '5 min light cardio — treadmill, bike, or rowing machine',
                 dynamic: [
-                    'Arm circles — 20 each direction',
-                    'Shoulder pass-throughs with band/towel',
-                    'Push-ups — 10-15 reps (bodyweight)',
-                    'Band pull-aparts — 15 reps'
+                    { name: 'Arm Circles', reps: '20 each direction', description: 'Arms straight out to the sides, make progressively larger circles. Lubricates the shoulder joint before pressing.' },
+                    { name: 'Shoulder Pass-Throughs', reps: '15 reps', description: 'Hold a band or towel with wide grip overhead, pass it behind the head and back. Improves shoulder mobility for pressing.' },
+                    { name: 'Bodyweight Push-ups', reps: '10–15 reps', description: 'Full push-ups at a controlled pace. Activates chest, shoulders and triceps with blood flow before loading.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Pull a band apart at chest height, arms straight. Activates rear delts and rotator cuff — critical counterbalance before heavy pressing.' }
                 ]
             },
             back: {
-                title: 'Back & Biceps Warm-up',
-                cardio: '5 min rowing or light cardio',
+                title: 'Smart Back & Biceps Warmup',
+                cardio: '5 min rowing machine or light cardio',
                 dynamic: [
-                    'Cat-cow stretches — 10 reps',
-                    'Band pull-aparts — 15 reps',
-                    'Scapular pull-ups or hangs — 10 reps',
-                    'Arm circles — 20 each direction'
+                    { name: 'Cat-Cow', reps: '10 reps', description: 'On hands and knees, alternate rounding and arching the spine slowly. Mobilises the thoracic spine before all the flexion from rowing.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Pull a band apart at chest height. Activates the rear delts and rhomboids — the primary pulling muscles — before loading them.' },
+                    { name: 'Scapular Pull-ups', reps: '10 reps', description: 'Hang from a bar, depress and retract the shoulder blades without bending the elbows. Activates the lats directly before pulling work.' },
+                    { name: 'Dead Hangs', reps: '30 seconds', description: 'Simply hang from the bar with relaxed shoulders. Decompresses the spine and primes grip for the session.' }
                 ]
             },
             legs: {
-                title: 'Legs Warm-up',
-                cardio: '5 min bike or brisk walking',
+                title: 'Smart Legs Warmup',
+                cardio: '5 min stationary bike or brisk treadmill walk',
                 dynamic: [
-                    'Leg swings (front/back) — 15 each leg',
-                    'Leg swings (side to side) — 15 each leg',
-                    'Bodyweight squats — 15-20 reps',
-                    'Walking lunges — 10 each leg'
+                    { name: 'Leg Swings (Front/Back)', reps: '15 each leg', description: 'Hold a wall for balance, swing each leg forward and back with increasing range. Mobilises the hip joint before squatting.' },
+                    { name: 'Leg Swings (Side to Side)', reps: '15 each leg', description: 'Swing each leg laterally across the body and out. Targets hip abductors and adductors that stabilise the squat.' },
+                    { name: 'Bodyweight Squats', reps: '15–20 reps', description: 'Full depth, controlled pace. Warms the quads, glutes and knee joints progressively before loading.' },
+                    { name: 'Walking Lunges', reps: '10 each leg', description: 'Slow, controlled walking lunges. Activates glutes and hip flexors unilaterally — essential before any heavy leg work.' }
                 ]
             },
             shoulders: {
-                title: 'Shoulders & Arms Warm-up',
-                cardio: '5 min light cardio',
+                title: 'Smart Shoulders & Arms Warmup',
+                cardio: '5 min light cardio — treadmill or bike',
                 dynamic: [
-                    'Arm circles — 20 each direction',
-                    'Shoulder pass-throughs — 15 reps',
-                    'Band pull-aparts — 15 reps',
-                    'Light lateral raises — 10 reps'
+                    { name: 'Arm Circles', reps: '20 each direction', description: 'Small to large progressive circles. Lubricates the shoulder joint before overhead pressing.' },
+                    { name: 'Shoulder Pass-Throughs', reps: '15 reps', description: 'Band or towel held with wide grip, pass overhead to behind the back. Assesses and improves overhead mobility.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Pull a band apart at chest height with straight arms. Activates rear delts and external rotators before pressing.' },
+                    { name: 'Light Lateral Raises', reps: '12 reps', description: 'Very light dumbbells, controlled raise to shoulder height. Activates the side delt specifically before loading it.' }
                 ]
             },
             push: {
-                title: 'Push Day Warm-up',
-                cardio: '5 min light cardio',
+                title: 'Smart Push Day Warmup',
+                cardio: '5 min light cardio — treadmill or bike',
                 dynamic: [
-                    'Arm circles — 20 each direction',
-                    'Push-ups — 10-15 reps',
-                    'Shoulder pass-throughs — 15 reps',
-                    'Band pull-aparts — 15 reps'
+                    { name: 'Arm Circles', reps: '20 each direction', description: 'Progressive circles priming the shoulder joint before any pressing.' },
+                    { name: 'Bodyweight Push-ups', reps: '15 reps', description: 'Controlled full range push-ups. Activates the entire push pattern before adding load.' },
+                    { name: 'Shoulder Pass-Throughs', reps: '15 reps', description: 'Band or towel pass from front to behind the head. Ensures full overhead mobility before pressing.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Rear delt activation before pressing — prevents the imbalance that accumulates from push-focused sessions.' }
                 ]
             },
             pull: {
-                title: 'Pull Day Warm-up',
-                cardio: '5 min rowing or light cardio',
+                title: 'Smart Pull Day Warmup',
+                cardio: '5 min rowing machine or light cardio',
                 dynamic: [
-                    'Cat-cow stretches — 10 reps',
-                    'Band pull-aparts — 15 reps',
-                    'Scapular pull-ups — 10 reps',
-                    'Light face pulls — 15 reps'
+                    { name: 'Cat-Cow', reps: '10 reps', description: 'Thoracic spine mobilisation before all the sagittal-plane pulling to come.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Direct activation of the rear delts and rhomboids — your primary pulling muscles.' },
+                    { name: 'Scapular Pull-ups', reps: '10 reps', description: 'Lat activation on the bar without bending elbows. Primes the lats specifically for pull-ups and rows.' },
+                    { name: 'Light Face Pulls', reps: '15 reps', description: 'Cable or band face pull to external rotation. Activates the rotator cuff and prepares the shoulder for pulling loads.' }
                 ]
             },
             upper: {
-                title: 'Upper Body Warm-up',
-                cardio: '5 min light cardio',
+                title: 'Smart Upper Body Warmup',
+                cardio: '5 min light cardio — treadmill or bike',
                 dynamic: [
-                    'Arm circles — 20 each direction',
-                    'Push-ups — 10 reps',
-                    'Band pull-aparts — 15 reps',
-                    'Shoulder pass-throughs — 15 reps'
+                    { name: 'Arm Circles', reps: '20 each direction', description: 'Full shoulder joint lubrication before combined push and pull work.' },
+                    { name: 'Bodyweight Push-ups', reps: '10 reps', description: 'Activates the pressing muscles before loading them.' },
+                    { name: 'Band Pull-Aparts', reps: '15 reps', description: 'Rear delt and rotator cuff activation — important before any upper body session.' },
+                    { name: 'Shoulder Pass-Throughs', reps: '15 reps', description: 'Overhead mobility check and warm-up before pressing and pulling movements.' }
                 ]
             },
             lower: {
-                title: 'Lower Body Warm-up',
-                cardio: '5 min bike or walking',
+                title: 'Smart Lower Body Warmup',
+                cardio: '5 min stationary bike or brisk walk',
                 dynamic: [
-                    'Leg swings — 15 each direction',
-                    'Hip circles — 10 each direction',
-                    'Bodyweight squats — 20 reps',
-                    'Glute bridges — 15 reps'
+                    { name: 'Leg Swings', reps: '15 each direction per leg', description: 'Front-to-back and side-to-side swings to open up the hip joint before squatting and hinging.' },
+                    { name: 'Hip Circles', reps: '10 each direction', description: 'Standing hip circles mobilise the hip capsule and warm the hip flexors before heavy loading.' },
+                    { name: 'Bodyweight Squats', reps: '20 reps', description: 'Full depth, controlled pace. Progressively warms quads, glutes and knees before adding weight.' },
+                    { name: 'Glute Bridges', reps: '15 reps', description: 'Activates the glutes before squatting and hinging — reduces the gluteal inhibition from sitting and primes the primary hip extensors.' }
                 ]
             },
             fullbody: {
-                title: 'Full Body Warm-up',
-                cardio: '5 min light cardio',
+                title: 'Smart Full Body Warmup',
+                cardio: '5 min light cardio — treadmill, bike, or rowing machine',
                 dynamic: [
-                    'Jumping jacks — 30 reps',
-                    'Arm circles — 15 each direction',
-                    'Leg swings — 10 each leg',
-                    'Bodyweight squats — 15 reps'
+                    { name: 'Jumping Jacks', reps: '30 reps', description: 'Elevates heart rate and warms the entire body rapidly before compound full-body work.' },
+                    { name: 'Arm Circles', reps: '15 each direction', description: 'Shoulder joint mobilisation before any overhead or pressing movements.' },
+                    { name: 'Leg Swings', reps: '10 each leg', description: 'Hip joint mobilisation before squatting and hinging patterns.' },
+                    { name: 'Bodyweight Squats', reps: '15 reps', description: 'Full depth bodyweight squats to warm the legs and hips before loading the full body.' }
                 ]
             }
         };
@@ -4048,18 +4119,21 @@
             const suggestions = warmupSuggestions[workoutType] || warmupSuggestions['fullbody'];
             
             document.getElementById('warmupSuggestions').innerHTML = `
-                <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">${suggestions.title}</div>
+                <div style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px;">${suggestions.title}</div>
                 
                 <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
-                    <span style="font-size: 16px;">🚴</span>
+                    <span style="font-size: 18px;">🚴</span>
                     <span style="font-size: 13px; color: var(--text-secondary);">${suggestions.cardio}</span>
                 </div>
                 
-                <div style="font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Dynamic Movements</div>
+                <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;">Dynamic Movements</div>
                 ${suggestions.dynamic.map(move => `
-                    <div style="display: flex; align-items: flex-start; gap: 8px; margin-bottom: 6px;">
-                        <span style="color: var(--success); font-size: 12px;">•</span>
-                        <span style="font-size: 13px; color: var(--text-primary);">${move}</span>
+                    <div style="display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px;">
+                        <span style="color: var(--success); font-size: 14px; margin-top: 2px;">✓</span>
+                        <div>
+                            <div style="font-size: 14px; font-weight: 700; color: var(--text-primary);">${move.name} <span style="font-weight: 400; color: var(--text-muted);">— ${move.reps}</span></div>
+                            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">${move.description}</div>
+                        </div>
                     </div>
                 `).join('')}
             `;
@@ -4101,12 +4175,13 @@
             
             // Build warmup routine with timers
             currentWarmupRoutine = [
-                { name: 'Light Cardio', duration: 300, instruction: suggestions.cardio, icon: '🚴' },
+                { name: 'Light Cardio', duration: 300, instruction: suggestions.cardio, description: 'Elevate your heart rate and increase blood flow before training.', icon: '🚴' },
                 ...suggestions.dynamic.map(move => ({
-                    name: move.split('—')[0].trim(),
+                    name: move.name,
                     duration: 45,
-                    instruction: move,
-                    icon: '🔄'
+                    instruction: `${move.reps}`,
+                    description: move.description,
+                    icon: '💪'
                 }))
             ];
             
@@ -4137,15 +4212,16 @@
                                 border-radius: 16px; padding: 16px; margin-bottom: 12px;
                                 ${isActive ? 'box-shadow: 0 4px 12px rgba(255, 107, 53, 0.2);' : ''}">
                         
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: ${isActive ? '12px' : '0'};">
-                            <div style="display: flex; align-items: center; gap: 12px;">
-                                <div style="font-size: 24px;">${isComplete ? '✅' : ex.icon}</div>
-                                <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: ${isActive ? '12px' : '0'};">
+                            <div style="display: flex; align-items: flex-start; gap: 12px; flex: 1;">
+                                <div style="font-size: 24px; flex-shrink: 0;">${isComplete ? '✅' : ex.icon}</div>
+                                <div style="flex: 1;">
                                     <div style="font-size: 16px; font-weight: 700; color: ${isComplete ? 'var(--success)' : 'var(--text-primary)'};">${ex.name}</div>
-                                    <div style="font-size: 13px; color: var(--text-secondary);">${ex.instruction}</div>
+                                    <div style="font-size: 13px; color: var(--primary); font-weight: 600; margin-top: 1px;">${ex.instruction}</div>
+                                    ${ex.description ? `<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">${ex.description}</div>` : ''}
                                 </div>
                             </div>
-                            ${!isComplete ? `<div style="font-size: 14px; color: var(--text-muted);">${Math.floor(ex.duration / 60)}:${String(ex.duration % 60).padStart(2, '0')}</div>` : ''}
+                            ${!isComplete ? `<div style="font-size: 13px; color: var(--text-muted); flex-shrink: 0; margin-left: 8px;">${Math.floor(ex.duration / 60)}:${String(ex.duration % 60).padStart(2, '0')}</div>` : ''}
                         </div>
                         
                         ${isActive ? `
@@ -4219,11 +4295,24 @@
             currentWarmupStep++;
             
             if (currentWarmupStep >= currentWarmupRoutine.length) {
-                // Warm-up complete
-                finishGuidedWarmup();
+                // Warm-up complete — show completion state, wait for user tap
+                const container = document.getElementById('warmupExerciseList');
+                if (container) {
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 40px 20px;">
+                            <div style="font-size: 64px; margin-bottom: 16px;">✅</div>
+                            <div style="font-size: 24px; font-weight: 800; color: var(--success); margin-bottom: 8px;">Warm-up Complete!</div>
+                            <div style="font-size: 15px; color: var(--text-secondary); margin-bottom: 32px;">Your body is ready — time to train.</div>
+                            <button onclick="finishGuidedWarmup()" style="width: 100%; padding: 18px; background: var(--success); border: none; color: white; border-radius: 12px; font-size: 17px; font-weight: 700; cursor: pointer;">
+                                Start Workout 💪
+                            </button>
+                        </div>
+                    `;
+                }
+                if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+                document.getElementById('warmupScreenSubtitle').textContent = 'Ready to train!';
             } else {
                 renderWarmupExercises();
-                // Scroll to active exercise
                 const container = document.getElementById('warmupExerciseList');
                 const cards = container.querySelectorAll('div[style*="border-radius: 16px"]');
                 if (cards[currentWarmupStep]) {
@@ -5898,6 +5987,7 @@
                                             <div style="display: flex; align-items: center; gap: 4px;">
                                                 <button onclick="adjustSetWeight(${exIndex}, ${setIndex}, -0.5)" style="background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); width: 28px; height: 28px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">−</button>
                                                 <input type="number" 
+                                                       id="weight-${exIndex}-${setIndex}"
                                                        value="${set.weight}" 
                                                        onchange="updateSetWeight(${exIndex}, ${setIndex}, this.value)"
                                                        style="width: 50px; padding: 4px 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; font-weight: 700; text-align: center; font-family: 'Outfit', sans-serif;"
@@ -5913,6 +6003,7 @@
                                         <div style="display: flex; align-items: center; gap: 4px;">
                                             <button onclick="adjustSetReps(${exIndex}, ${setIndex}, -1)" style="background: var(--surface); border: 1px solid var(--border); color: var(--text-primary); width: 28px; height: 28px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">−</button>
                                             <input type="number" 
+                                                   id="reps-${exIndex}-${setIndex}"
                                                    value="${set.reps}" 
                                                    onchange="updateSetReps(${exIndex}, ${setIndex}, this.value)"
                                                    style="width: 40px; padding: 4px 2px; background: var(--surface); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 13px; font-weight: 700; text-align: center; font-family: 'Outfit', sans-serif;"
@@ -6128,6 +6219,9 @@
             
             // Show rest timer banner
             document.getElementById('restTimerBanner').style.display = 'block';
+            // Add bottom padding to exercise list so nothing is obscured by the fixed banner
+            const exList = document.getElementById('exerciseList');
+            if (exList) exList.style.paddingBottom = '120px';
             
             // Check if exercise is in superset - show extended rest message
             const isInSuperset = isExerciseInSuperset(exIndex);
@@ -6179,8 +6273,10 @@
             restTimerActive = false;
             restTimeRemaining = 0;
             
-            // Hide banner
+            // Hide banner and restore padding
             document.getElementById('restTimerBanner').style.display = 'none';
+            const exList = document.getElementById('exerciseList');
+            if (exList) exList.style.paddingBottom = '';
             
             // No beeps on finish - silence is golden
         }
@@ -6926,25 +7022,52 @@
             const set = currentExercises[exIndex].sets[setIndex];
             set.weight = Math.max(0, parseFloat(set.weight) + amount);
             set.weight = parseFloat(set.weight.toFixed(1));
-            renderExercises();
+            // Surgical update — no full re-render
+            const input = document.getElementById(`weight-${exIndex}-${setIndex}`);
+            if (input) input.value = set.weight;
+            // Update the completed set summary line if it exists
+            updateSetSummaryLine(exIndex, setIndex);
+            updateWorkoutProgress();
+            saveWorkoutSession();
         }
 
         function updateSetWeight(exIndex, setIndex, value) {
             const weight = parseFloat(value) || 0;
             currentExercises[exIndex].sets[setIndex].weight = Math.max(0, weight);
-            renderExercises();
+            updateSetSummaryLine(exIndex, setIndex);
+            updateWorkoutProgress();
+            saveWorkoutSession();
         }
 
         function adjustSetReps(exIndex, setIndex, amount) {
             const set = currentExercises[exIndex].sets[setIndex];
             set.reps = Math.max(1, parseInt(set.reps) + amount);
-            renderExercises();
+            // Surgical update — no full re-render
+            const input = document.getElementById(`reps-${exIndex}-${setIndex}`);
+            if (input) input.value = set.reps;
+            updateSetSummaryLine(exIndex, setIndex);
+            updateWorkoutProgress();
+            saveWorkoutSession();
         }
 
         function updateSetReps(exIndex, setIndex, value) {
             const reps = parseInt(value) || 1;
             currentExercises[exIndex].sets[setIndex].reps = Math.max(1, reps);
-            renderExercises();
+            updateSetSummaryLine(exIndex, setIndex);
+            updateWorkoutProgress();
+            saveWorkoutSession();
+        }
+
+        function updateSetSummaryLine(exIndex, setIndex) {
+            // Update the summary display on a completed set card if present
+            const summaryEl = document.getElementById(`set-summary-${exIndex}-${setIndex}`);
+            if (!summaryEl) return;
+            const set = currentExercises[exIndex].sets[setIndex];
+            const ex = currentExercises[exIndex];
+            const unit = ex.isTimeBased ? 'sec' : 'reps';
+            summaryEl.textContent = ex.isBodyweight
+                ? `${set.reps} ${unit}`
+                : `${set.weight}kg × ${set.reps} ${unit}`;
         }
 
         // WORKOUT NOTES
@@ -8967,7 +9090,6 @@
             const mins = Math.floor(duration / 60);
             const hasPRs = newPRs && newPRs.length > 0;
             
-            // Store for sharing
             window.lastWorkoutSummary = {
                 workout: getWorkoutInfo(currentWorkout).name,
                 duration: mins,
@@ -8976,54 +9098,54 @@
                 prs: newPRs || []
             };
             
-            let prSection = '';
-            if (hasPRs) {
-                prSection = `
-                    <div style="background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 16px; padding: 20px; margin-bottom: 20px;">
-                        <div style="font-size: 40px; margin-bottom: 8px;">🏆</div>
-                        <div style="font-size: 18px; font-weight: 800; color: #000; margin-bottom: 12px;">NEW PR${newPRs.length > 1 ? 's' : ''}!</div>
-                        ${newPRs.map(pr => `
-                            <div style="background: rgba(0,0,0,0.1); border-radius: 8px; padding: 10px; margin-bottom: 8px;">
-                                <div style="font-weight: 700; color: #000;">${pr.exercise}</div>
-                                <div style="font-size: 13px; color: rgba(0,0,0,0.7);">${pr.weight}kg × ${pr.reps} reps</div>
-                            </div>
-                        `).join('')}
+            // Compact PR line (inline, not a big block)
+            const prLine = hasPRs
+                ? `<div style="background: linear-gradient(135deg, #FFD700, #FFA500); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">🏆</span>
+                    <div style="flex: 1;">
+                        <div style="font-size: 13px; font-weight: 800; color: #000;">
+                            ${newPRs.length} New PR${newPRs.length > 1 ? 's' : ''}!
+                        </div>
+                        <div style="font-size: 11px; color: rgba(0,0,0,0.7);">${newPRs.map(pr => pr.exercise).join(', ')}</div>
                     </div>
-                `;
-            }
+                   </div>`
+                : '';
             
             document.getElementById('workoutSummaryContent').innerHTML = `
-                <div style="font-size: 64px; margin-bottom: 16px;">${hasPRs ? '🎉' : '💪'}</div>
-                <div style="font-size: 24px; font-weight: 800; margin-bottom: 8px;">Workout Complete!</div>
-                <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 24px;">${getWorkoutInfo(currentWorkout).name}</div>
+                <div style="text-align: center; margin-bottom: 14px;">
+                    <div style="font-size: 40px; margin-bottom: 6px;">${hasPRs ? '🎉' : '💪'}</div>
+                    <div style="font-size: 20px; font-weight: 800;">Workout Complete!</div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">${getWorkoutInfo(currentWorkout).name}</div>
+                </div>
                 
-                ${prSection}
+                ${prLine}
                 
-                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px;">
-                    <div style="background: var(--surface); border-radius: 12px; padding: 16px;">
-                        <div style="font-size: 24px; font-weight: 800; color: var(--primary);">${mins}</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">minutes</div>
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;">
+                    <div style="background: var(--surface); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: var(--primary);">${mins}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">min</div>
                     </div>
-                    <div style="background: var(--surface); border-radius: 12px; padding: 16px;">
-                        <div style="font-size: 24px; font-weight: 800; color: var(--success);">${totalSets}</div>
+                    <div style="background: var(--surface); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: var(--success);">${totalSets}</div>
                         <div style="font-size: 11px; color: var(--text-muted);">sets</div>
                     </div>
-                    <div style="background: var(--surface); border-radius: 12px; padding: 16px;">
-                        <div style="font-size: 24px; font-weight: 800; color: var(--accent);">${Math.round(totalVolume/1000)}k</div>
-                        <div style="font-size: 11px; color: var(--text-muted);">kg volume</div>
+                    <div style="background: var(--surface); border-radius: 12px; padding: 12px; text-align: center;">
+                        <div style="font-size: 22px; font-weight: 800; color: var(--accent);">${totalVolume >= 1000 ? Math.round(totalVolume/1000) + 'k' : totalVolume}</div>
+                        <div style="font-size: 11px; color: var(--text-muted);">kg vol</div>
                     </div>
                 </div>
                 
-                <button onclick="showShareOptions('workout')" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); border: none; color: white; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                    <span>📤</span> Share Workout
-                </button>
-                
-                <button onclick="closeWorkoutSummary(true)" style="width: 100%; padding: 16px; background: var(--primary); border: none; color: white; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px;">
+                <button onclick="closeWorkoutSummary(true)" style="width: 100%; padding: 16px; background: var(--primary); border: none; color: white; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 10px;">
                     Continue to Stretches →
                 </button>
-                <button onclick="closeWorkoutSummary(false)" style="width: 100%; padding: 14px; background: transparent; border: 2px solid var(--border); color: var(--text-secondary); border-radius: 12px; font-size: 15px; font-weight: 600; cursor: pointer;">
-                    Skip Stretches
-                </button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="showShareOptions('workout')" style="flex: 1; padding: 13px; background: var(--surface); border: 2px solid var(--border); color: var(--text-secondary); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        📤 Share
+                    </button>
+                    <button onclick="closeWorkoutSummary(false)" style="flex: 1; padding: 13px; background: var(--surface); border: 2px solid var(--border); color: var(--text-secondary); border-radius: 12px; font-size: 14px; font-weight: 600; cursor: pointer;">
+                        Skip Stretches
+                    </button>
+                </div>
             `;
             
             document.getElementById('workoutSummaryModal').classList.add('active');
@@ -9042,70 +9164,236 @@
             }
         }
         
+        // ─────────────────────────────────────────────────────────────────────
+        // MASTER STRETCH POOL — Individual quality stretches tagged by muscle.
+        // Used by custom workout builder to select appropriate, non-repetitive
+        // stretches based on muscles worked. Each pool key maps to 2-3
+        // alternatives so the variety system has real options to rotate through.
+        // ─────────────────────────────────────────────────────────────────────
+
+        const stretchPool = {
+            'Chest': [
+                { name: 'Doorway Chest Stretch', target: 'Pectoralis Major & Anterior Deltoid', duration: 60, why: 'Pressing movements repeatedly shorten the pectorals and anterior deltoid. This stretch directly opens the anterior shoulder and chest, counteracting the forward-shoulder posture that pressing accumulates.', instructions: ['Stand in a doorway, place one forearm vertically on the frame', 'Step through until you feel a stretch across the chest and front shoulder', 'Keep the shoulder blade actively pulled back and down', 'Hold steady — do not bounce or pulse the position', 'Breathe deeply, relaxing the chest further with each exhale'] },
+                { name: 'Prone Chest Opener', target: 'Pectoralis Minor & Anterior Shoulder', duration: 45, bilateral: true, why: 'The pec minor and anterior shoulder capsule accumulate deep tension during pressing that the doorway stretch does not fully reach. This gravity-assisted position targets the deeper muscle fibres and the shoulder joint capsule itself.', instructions: ['Lie face down and extend one arm out to the side at 90 degrees', 'Gently roll onto that side, using the opposite leg for stability', 'Feel a deep stretch across the chest and front of the shoulder', 'Relax completely — let gravity do the work, do not force it', 'After 45 seconds, switch to the opposite side'] },
+                { name: 'Standing Chest Clasp', target: 'Pectoralis Major & Biceps', duration: 45, why: 'A simpler chest opener requiring no equipment. Clasping hands behind the back and lifting them opens the pec major and anterior shoulder through the same movement pattern that pressing repeatedly closes.', instructions: ['Stand tall, clasp both hands together behind your back', 'Straighten the arms fully and gently lift the hands away from the body', 'Keep the chest lifted and squeeze the shoulder blades together', 'Look slightly upward to deepen the anterior shoulder component', 'Hold steady and breathe deeply into the chest'] }
+            ],
+            'Triceps': [
+                { name: 'Overhead Tricep Stretch', target: 'Triceps Brachii Long Head', duration: 45, bilateral: true, why: 'The triceps long head crosses both the shoulder and elbow joints. It is the only tricep portion that requires the overhead position to achieve a full stretch — side stretches do not reach it.', instructions: ['Raise one arm overhead and bend the elbow, reaching the hand toward the shoulder blades', 'Use the other hand to gently guide the elbow further back', 'Keep the torso upright — avoid bending sideways', 'Feel the stretch along the entire back of the upper arm and into the shoulder', 'After 45 seconds, switch arms'] },
+                { name: 'Cross-Body Tricep Extension', target: 'Triceps & Posterior Shoulder', duration: 45, bilateral: true, why: 'An alternative tricep stretch that also opens the posterior shoulder. The cross-body position is better tolerated by those with shoulder mobility limitations that make the overhead position uncomfortable.', instructions: ['Raise one arm and bend the elbow, bringing the hand toward the opposite shoulder', 'Use the other hand to gently push the elbow across the body', 'Keep the shoulder blade down — do not let the shoulder shrug upward', 'Feel the stretch along the back of the upper arm', 'After 45 seconds, switch arms'] }
+            ],
+            'Lats': [
+                { name: 'Lat Hang Stretch', target: 'Latissimus Dorsi', duration: 60, why: 'Pulling exercises cause forceful lat contraction. This gravity-assisted hang decompresses the spine and lengthens the entire lat from insertion to origin — one of the most effective post-pulling stretches available.', instructions: ['Hang from a pull-up bar with arms fully extended', 'Let body weight pull you down, relax the shoulders completely', 'Keep a light core engagement to protect the lower back', 'Breathe deeply and feel the stretch along the sides of the torso', 'Hold for the full duration — this is active spinal decompression'] },
+                { name: 'Doorway Lat Stretch', target: 'Latissimus Dorsi', duration: 45, bilateral: true, why: 'After heavy pulling, lats remain in a shortened position. This stretch isolates each side individually, addressing the asymmetries that naturally develop from bilateral pulling movements.', instructions: ['Stand in a doorway, grasp the frame at shoulder height with one hand', 'Step back and lean away from the grasping arm', 'Keep the hips square — do not rotate the torso', 'Feel the stretch from the armpit down to the lower back', 'After 45 seconds, switch sides'] },
+                { name: 'Child\'s Pose Lat Stretch', target: 'Latissimus Dorsi & Serratus', duration: 45, bilateral: true, why: 'Uses gravity and arm extension to target the entire lat and serratus anterior simultaneously. A good alternative when a pull-up bar is not available.', instructions: ['Kneel and sit back on the heels', 'Extend both arms as far forward as possible along the ground', 'Walk the hands to one side to deepen the stretch on the opposite lat', 'Sink the hips back toward the heels and breathe into the stretch', 'After 45 seconds, walk hands to the other side'] }
+            ],
+            'Mid Back': [
+                { name: 'Chest-Hug Rhomboid Stretch', target: 'Rhomboids & Mid Trapezius', duration: 45, why: 'The rhomboids and mid-trapezius are the primary scapular retractors — they do the most work in all rowing movements. Most post-workout routines only stretch the lats and miss these muscles entirely.', instructions: ['Stand or sit tall with the spine neutral', 'Cross both arms across the chest as if hugging yourself firmly', 'Reach the hands as far around the back as possible', 'Drop the chin gently toward the chest and round the upper back', 'Feel the stretch between the shoulder blades and across the upper back'] },
+                { name: 'Seated Spinal Twist', target: 'Mid Back & Thoracic Spine', duration: 45, bilateral: true, why: 'Rowing movements occur purely in the sagittal plane with no rotation. This creates thoracic stiffness that accumulates across a back session. The rotational component restores normal thoracic mobility.', instructions: ['Sit tall with legs extended', 'Bend one knee and cross that foot over the opposite leg', 'Place the opposite elbow on the outside of the raised knee', 'Rotate the torso toward the raised knee gently', 'After 45 seconds, switch sides'] },
+                { name: 'Thread the Needle', target: 'Thoracic Spine & Posterior Shoulder', duration: 45, bilateral: true, why: 'Targets thoracic rotation — the movement plane completely absent during all pulling exercises. Restores the rotational mobility that sustained single-plane rowing accumulates.', instructions: ['Start on hands and knees, hips over knees, shoulders over hands', 'Thread one arm under the body toward the opposite side', 'Rest the shoulder and side of the head on the ground', 'The other arm can press into the ground for deeper rotation', 'After 45 seconds, return and switch sides'] }
+            ],
+            'Upper Back': [
+                { name: 'Thoracic Extension on Foam Roller', target: 'Thoracic Spine', duration: 45, why: 'Rowing creates a thoracic flexion bias — sustained pulling with the spine in flexion stiffens the thoracic vertebrae over time. This extension movement is the direct antidote, restoring spinal mobility and counteracting the forward-rounded position from training.', instructions: ['Lie back with a foam roller at the mid-back — not the lower back', 'Support the head with both hands, elbows wide', 'Gently extend backward over the roller, letting the thoracic spine open', 'Roll up and down 1–2 vertebrae at a time, pausing where stiff', 'Breathe deeply into each position — exhale into the extension'] },
+                { name: 'Chest-Hug Rhomboid Stretch', target: 'Rhomboids & Upper Traps', duration: 45, why: 'Upper back work loads the traps and rhomboids heavily. This stretch pulls the shoulder blades apart and releases the muscles between them — a tension pattern that most gym-goers carry chronically.', instructions: ['Stand or sit tall with the spine neutral', 'Cross both arms across the chest, reaching hands as far around the back as possible', 'Drop the chin toward the chest and round the upper back', 'Hold and feel the stretch between the shoulder blades', 'Breathe into the upper back, allowing it to release with each exhale'] }
+            ],
+            'Lower Back': [
+                { name: 'Knee-to-Chest Stretch', target: 'Lumbar Spine & Glutes', duration: 45, bilateral: true, why: 'Deadlifts and heavy compound movements load the lumbar erectors isometrically for the entire session. This stretch directly decompresses the lumbar spine and releases the erectors — the muscles you feel aching after a heavy pull day.', instructions: ['Lie on your back with both legs extended', 'Draw one knee toward the chest and hold with both hands', 'Keep the opposite leg extended and the lower back pressed gently into the floor', 'Feel the stretch in the lower back and glute of the raised leg', 'After 45 seconds, switch legs, then optionally draw both knees to chest'] },
+                { name: 'Seated Forward Fold', target: 'Hamstrings & Lumbar Spine', duration: 60, why: 'Creates a simultaneous hamstring and lumbar spine stretch — addressing both structures that accumulate tension during deadlift and row-based back work.', instructions: ['Sit on the floor with both legs extended straight in front of you', 'Hinge forward from the hips — do not round the lower back to reach further', 'Reach toward the feet, keeping the back as straight as possible', 'If hamstrings are very tight, bend the knees slightly to remove lower back strain', 'Breathe deeply and relax further into the stretch with each exhale'] }
+            ],
+            'Shoulders': [
+                { name: 'Cross-Body Shoulder', target: 'Posterior Deltoid & Teres Major', duration: 45, bilateral: true, why: 'The posterior deltoid works as a stabiliser throughout all pressing and overhead movements, and as a prime mover in rear delt work. This stretch directly targets the posterior shoulder structures that accumulate the most tension during shoulder training.', instructions: ['Bring one arm straight across the body at chest height', 'Use the other hand to gently pull the arm closer to the chest', 'Keep both shoulders level — do not rotate the torso', 'Feel the stretch in the back and outside of the shoulder', 'After 45 seconds, switch arms'] },
+                { name: 'Sleeper Stretch', target: 'Posterior Shoulder Capsule', duration: 45, bilateral: true, why: 'The posterior shoulder capsule becomes restricted with repeated pressing and overhead loading. Tightness here is a primary driver of shoulder impingement. The sleeper stretch directly targets the capsule in a way that no other common shoulder stretch does.', instructions: ['Lie on one side with the bottom shoulder at 90 degrees, elbow bent', 'Use the top hand to gently press the bottom wrist toward the floor', 'Keep the shoulder blade pressed against the ribcage throughout', 'Feel a gentle stretch in the back of the bottom shoulder', 'After 45 seconds, switch sides'] },
+                { name: 'Doorway Chest Stretch', target: 'Anterior Deltoid & Chest', duration: 60, why: 'The anterior deltoid is heavily loaded during all pressing and overhead pressing movements. This stretch opens the front of the shoulder and counteracts the internal rotation pattern reinforced by pressing.', instructions: ['Stand in a doorway, place one forearm vertically on the frame', 'Step through until you feel a stretch across the front of the shoulder', 'Keep the shoulder blade actively pulled back and down throughout', 'Hold steady and breathe deeply', 'Switch sides after 60 seconds'] }
+            ],
+            'Rear Delts': [
+                { name: 'Cross-Body Shoulder', target: 'Posterior Deltoid & Rotator Cuff', duration: 45, bilateral: true, why: 'The rear delt is the primary target of face pulls and rear delt work. After isolation rear delt training the muscle needs direct stretching — which most programs skip entirely.', instructions: ['Bring one arm straight across the body at chest height', 'Use the other hand to gently pull the arm closer to the chest', 'Keep both shoulders level — do not rotate the torso', 'Feel the stretch in the back and outside of the shoulder', 'After 45 seconds, switch arms'] },
+                { name: 'Prone Y-Raise Hold', target: 'Lower Traps & Rear Delts', duration: 45, why: 'A light active stretch that lengthens the rear delt and lower trapezius simultaneously. Holding the Y position under gravity gently opens the posterior shoulder structures.', instructions: ['Lie face down with arms in a Y shape at roughly 45 degrees from overhead', 'Allow the arms to hang down toward the floor with no muscular effort', 'Feel a gentle stretch through the rear delts and posterior shoulder', 'Breathe deeply into each repetition', 'Hold for the full duration with the arms relaxed and heavy'] }
+            ],
+            'Biceps': [
+                { name: 'Bicep Wall Stretch', target: 'Biceps Brachii & Brachialis', duration: 45, bilateral: true, why: 'The long head of the biceps crosses both the shoulder and elbow joints. This is the only stretch that adequately reaches it — elbow-based stretches do not address the shoulder portion.', instructions: ['Stand sideways to a wall, extend the arm straight behind you', 'Place the palm flat on the wall with the thumb pointing upward', 'Gently turn the body away from the wall, keeping the arm straight', 'Feel the stretch from the elbow through the front of the shoulder', 'After 45 seconds, switch arms'] },
+                { name: 'Wrist Flexor Stretch', target: 'Forearm Flexors & Wrist', duration: 45, bilateral: true, why: 'Heavy curling loads the forearm flexors alongside the biceps. This stretch addresses the full chain from wrist to elbow that accumulates tension during curl work.', instructions: ['Extend one arm in front of you with the palm facing upward', 'Use the other hand to gently pull the fingers back toward you', 'Keep the elbow fully straight throughout the stretch', 'Feel the stretch along the underside of the forearm from wrist to elbow', 'After 45 seconds, switch arms'] },
+                { name: 'Doorway Bicep Stretch', target: 'Biceps Long Head & Anterior Shoulder', duration: 45, bilateral: true, why: 'Placing the palm on a wall or doorway with the thumb pointing backward creates a bicep stretch that also opens the anterior shoulder. A more complete alternative to the standard bicep wall stretch for those who also trained shoulders.', instructions: ['Stand sideways to a doorway or wall', 'Place the palm flat on the surface with the thumb pointing downward and behind you', 'Slowly rotate the body away from the arm', 'Feel the stretch shifting along the bicep and into the front of the shoulder', 'After 45 seconds, switch arms'] }
+            ],
+            'Forearms': [
+                { name: 'Wrist Flexor Stretch', target: 'Forearm Flexors & Wrist Tendons', duration: 45, bilateral: true, why: 'Heavy gripping in any pulling or forearm session loads the forearm flexors and wrist flexor tendons significantly. Neglecting this is one of the most common contributors to elbow and wrist issues in strength trainers.', instructions: ['Extend one arm in front of you with the palm facing upward', 'Use the other hand to gently pull the fingers back toward you', 'Keep the elbow fully straight throughout the stretch', 'Feel the stretch along the underside of the forearm from wrist to elbow', 'After 45 seconds, switch arms'] },
+                { name: 'Wrist Extensor Stretch', target: 'Forearm Extensors', duration: 45, bilateral: true, why: 'Forearm extensor weakness relative to flexors is a primary cause of lateral epicondylitis (tennis elbow). Stretching the extensors after sessions that load grip balances the forearm and protects the common extensor tendon.', instructions: ['Extend one arm in front of you with the palm facing downward', 'Use the other hand to gently bend the wrist downward, curling the fingers', 'Keep the elbow straight throughout', 'Feel the stretch along the top of the forearm from the wrist to the elbow', 'After 45 seconds, switch arms'] }
+            ],
+            'Quads': [
+                { name: 'Standing Quad Stretch', target: 'Quadriceps & Rectus Femoris', duration: 60, bilateral: true, why: 'Squats and leg press keep the quads under constant tension. The rectus femoris crosses both the hip and knee — it is the most commonly restricted quad and the priority target after any quad-dominant session.', instructions: ['Stand on one leg and grab the opposite ankle behind you', 'Pull the heel toward the glutes, keeping the knees together', 'Keep the hips square — do not let the knee drift outward', 'Feel the stretch running down the entire front of the thigh', 'After 60 seconds, switch legs'] },
+                { name: 'Kneeling Quad Stretch', target: 'Quadriceps & Hip Flexors', duration: 60, bilateral: true, why: 'A more stable quad stretch for those with balance limitations. The kneeling position also creates a deeper rectus femoris stretch by simultaneously extending the hip while flexing the knee.', instructions: ['Kneel on one knee on a soft surface', 'Reach back and grasp the back foot with the same-side hand', 'Pull the heel toward the glute while keeping the torso upright', 'Tuck the pelvis slightly to increase the hip extension component', 'After 60 seconds, switch legs'] },
+                { name: 'Lying Quad Stretch', target: 'Quadriceps', duration: 60, bilateral: true, why: 'The prone lying position is the most relaxed and complete quad stretch available — the body is fully supported so there is no balance demand, allowing full muscular release into the stretch.', instructions: ['Lie face down on the floor', 'Bend one knee and reach back to grasp the ankle with the same-side hand', 'Gently pull the heel toward the glute', 'Keep the hips pressed into the floor throughout', 'After 60 seconds, switch legs'] }
+            ],
+            'Hamstrings': [
+                { name: 'Seated Hamstring Stretch', target: 'Hamstrings', duration: 60, bilateral: true, why: 'Isolates each hamstring independently, allowing a deeper stretch and revealing side-to-side imbalances. The single-leg position stretches the full hamstring from the ischial tuberosity to the knee.', instructions: ['Sit with one leg extended, the other bent inward', 'Hinge forward from the hips — do not round the spine to reach further', 'Reach toward the foot, keeping the back as straight as possible', 'Feel the stretch along the entire back of the extended leg', 'After 60 seconds, switch legs'] },
+                { name: 'Standing Hamstring Stretch', target: 'Hamstrings', duration: 45, bilateral: true, why: 'An accessible hamstring stretch requiring no floor space. The standing position is better tolerated by those with tight hip flexors who find floor-based stretches uncomfortable.', instructions: ['Stand and extend one leg straight in front of you on a raised surface', 'Hinge forward from the hips toward the raised foot, keeping the back straight', 'Flex the foot (pull toes toward you) to increase the stretch', 'Feel the stretch along the entire back of the raised leg', 'After 45 seconds, switch legs'] },
+                { name: 'Supine Hamstring Stretch', target: 'Hamstrings & Calf', duration: 60, bilateral: true, why: 'The supine position completely eliminates lower back stress from the stretch, allowing maximum hamstring lengthening without any compensatory spinal rounding. The most joint-friendly hamstring stretch available.', instructions: ['Lie on your back with both legs extended', 'Raise one leg and hold it behind the thigh or calf', 'Straighten the knee as fully as possible without forcing', 'Flex the foot to add a calf component if desired', 'After 60 seconds, switch legs'] }
+            ],
+            'Glutes': [
+                { name: 'Figure-4 Glute Stretch', target: 'Gluteus Maximus & Piriformis', duration: 45, bilateral: true, why: 'The fully supported position allows complete muscular relaxation into the stretch. Safe for those with hip impingement where pigeon pose is contraindicated.', instructions: ['Lie on your back, cross one ankle over the opposite knee', 'Pull the bottom leg\'s thigh toward your chest using both hands', 'Keep the top foot flexed (toes toward shin) to protect the knee', 'Feel the stretch deep in the top leg\'s glute and outer hip', 'After 45 seconds, switch legs'] },
+                { name: 'Pigeon Pose', target: 'Gluteus Maximus & Hip Flexors', duration: 60, bilateral: true, caution: 'Not suitable for those with femoroacetabular impingement (FAI) or hip pinching — use Figure-4 Glute Stretch instead.', why: 'Simultaneously stretches the glutes of the front leg and hip flexors of the back leg — the most comprehensive single lower-body stretch available.', instructions: ['Start on hands and knees', 'Bring one knee forward behind the wrist, shin angled across the mat', 'Extend the back leg straight behind you, hips square', 'Lower the hips toward the ground — use support if needed', 'After 60 seconds, switch sides'] },
+                { name: 'Seated Glute Stretch', target: 'Gluteus Maximus & External Rotators', duration: 45, bilateral: true, why: 'A chair-accessible glute stretch requiring no floor space. Useful at the gym when floor space is limited or as a quick cool-down stretch before leaving.', instructions: ['Sit in a chair or on a bench', 'Cross one ankle over the opposite knee', 'Sit tall and gently lean forward from the hips', 'Feel the stretch deep in the glute of the crossed leg', 'After 45 seconds, switch legs'] }
+            ],
+            'Hip Flexors': [
+                { name: 'Hip Flexor Lunge', target: 'Hip Flexors & Iliacus', duration: 60, bilateral: true, why: 'The most effective hip flexor stretch available. Tightness here directly inhibits glute activation and contributes to anterior pelvic tilt and lower back stress — critical to address after any session involving squat patterns.', instructions: ['Take a lunge position with the back knee resting on the ground', 'Tuck the pelvis under (posterior pelvic tilt) before shifting forward', 'Move body weight forward until a stretch is felt in the front of the back hip', 'Keep the torso upright — do not lean forward at the waist', 'After 60 seconds, switch legs'] },
+                { name: 'Psoas Release (Supine)', target: 'Psoas & Iliacus', duration: 60, bilateral: true, why: 'Targets the deep psoas specifically — a muscle that sits against the lumbar spine and is responsible for much of the lower back tension that follows leg-heavy sessions. The supine position allows complete relaxation of the hip flexors.', instructions: ['Lie on your back on the edge of a bench or bed', 'Draw one knee to the chest and hold it there', 'Let the opposite leg hang down toward the floor freely', 'Feel the stretch in the front of the hanging hip', 'After 60 seconds, switch legs'] }
+            ],
+            'Calves': [
+                { name: 'Standing Calf Stretch', target: 'Gastrocnemius', duration: 45, bilateral: true, why: 'Targets the gastrocnemius (upper calf) with the knee straight. This must be the starting point of any calf stretch routine — the gastrocnemius is the muscle that contracts most visibly during calf raises.', instructions: ['Face a wall with both hands at shoulder height for support', 'Step one foot back, keeping the knee fully straight', 'Press the back heel firmly into the ground', 'Lean the front knee forward until the calf stretch is felt', 'After 45 seconds, switch legs'] },
+                { name: 'Deep Calf Stretch (Soleus)', target: 'Soleus', duration: 45, bilateral: true, why: 'The soleus lies beneath the gastrocnemius and can only be stretched with the knee bent. It is frequently neglected despite being a large, powerful muscle critical for ankle mobility and lower leg health.', instructions: ['Start in the same position as the standing calf stretch', 'Bend both knees, keeping the back heel pressed firmly into the ground', 'Feel the stretch shift lower down the calf, closer to the ankle', 'This is the soleus — distinct from the gastrocnemius above', 'After 45 seconds, switch legs'] }
+            ],
+            'Core': [
+                { name: 'Cobra Stretch', target: 'Abs & Hip Flexors', duration: 45, why: 'Core work involves repeated spinal flexion. The cobra stretch is the direct antidote — it extends the spine and stretches the rectus abdominis and hip flexors simultaneously.', instructions: ['Lie face down with hands placed under the shoulders', 'Press upward, extending the arms while keeping the hips on the floor', 'Keep the glutes relaxed — tightening them limits the stretch', 'Look slightly forward, keeping the neck in a neutral position', 'Breathe into the stretch and hold for the full duration'] },
+                { name: 'Child\'s Pose', target: 'Lumbar Spine & Core', duration: 45, why: 'A restorative stretch that decompresses the lumbar spine and gently lengthens the erectors and core musculature. An effective antidote to the compression that heavy core work creates.', instructions: ['Kneel and sit back on the heels', 'Extend both arms forward on the ground as far as possible', 'Rest the forehead on the ground and let the back round naturally', 'Breathe deeply into the lower back, feeling it expand with each inhale', 'Hold for the full duration — this is active recovery'] },
+                { name: 'Seated Spinal Twist', target: 'Obliques & Thoracic Spine', duration: 45, bilateral: true, why: 'Anti-rotation core work (Pallof press, suitcase carries) trains the core to resist rotation. The seated twist stretches through that range — releasing the obliques and thoracic spine that accumulate stiffness from sustained anti-rotation work.', instructions: ['Sit tall with legs extended', 'Bend one knee and place that foot flat on the floor', 'Place the opposite elbow on the outside of the raised knee', 'Rotate the torso gently toward the raised knee', 'After 45 seconds, switch sides'] }
+            ]
+        };
+
+        // ─────────────────────────────────────────────────────────────────────
+        // STRETCH VARIETY SYSTEM
+        // Tracks which stretches have been shown recently so the selection
+        // algorithm can prefer less-recently-shown alternatives.
+        // Stored in localStorage as: { stretchName: { lastShown: 'YYYY-MM-DD', count: N } }
+        // ─────────────────────────────────────────────────────────────────────
+        // STRETCH HISTORY — tracks which stretches have been shown and when.
+        // Stored in localStorage as: { stretchName: { lastShown: 'YYYY-MM-DD', count: N } }
+        // Used by getStretchScore and getVariedPresetRoutine to prefer fresher alternatives.
+        // ─────────────────────────────────────────────────────────────────────
+
+        function getStretchHistory() {
+            try {
+                return JSON.parse(localStorage.getItem('setsplus_stretch_history') || '{}');
+            } catch { return {}; }
+        }
+
+        function updateStretchHistory(stretchNames) {
+            try {
+                const history = JSON.parse(localStorage.getItem('setsplus_stretch_history') || '{}');
+                const today = new Date().toISOString().split('T')[0];
+                stretchNames.forEach(name => {
+                    if (!history[name]) history[name] = { lastShown: today, count: 0 };
+                    history[name].lastShown = today;
+                    history[name].count = (history[name].count || 0) + 1;
+                });
+                localStorage.setItem('setsplus_stretch_history', JSON.stringify(history));
+            } catch {}
+        }
+
+        function getStretchScore(stretchName, history) {
+            // Higher score = show this stretch (lower recency = preferred)
+            if (!history[stretchName]) return 100; // Never shown — top priority
+            const lastShown = new Date(history[stretchName].lastShown);
+            const today = new Date();
+            const daysAgo = Math.floor((today - lastShown) / (1000 * 60 * 60 * 24));
+            if (daysAgo >= 14) return 90;
+            if (daysAgo >= 7)  return 70;
+            if (daysAgo >= 3)  return 40;
+            if (daysAgo >= 1)  return 20;
+            return 5; // Shown today — only pick if no alternative
+        }
+
+        function selectStretchesForMuscles(musclesWorked) {
+            // Map exercise muscle names to stretchPool keys
+            const muscleToPoolKey = {
+                'Chest': 'Chest', 'Lower Chest': 'Chest', 'Upper Chest': 'Chest', 'Inner Chest': 'Chest',
+                'Pectoralis Major': 'Chest', 'Serratus Anterior': 'Chest',
+                'Lats': 'Lats', 'Latissimus Dorsi': 'Lats',
+                'Mid Back': 'Mid Back', 'Rhomboids': 'Mid Back', 'Teres Major': 'Mid Back',
+                'Upper Back': 'Upper Back', 'Traps': 'Upper Back', 'Lower Traps': 'Upper Back',
+                'Lower Back': 'Lower Back', 'Erectors': 'Lower Back',
+                'Triceps': 'Triceps', 'Triceps Long Head': 'Triceps',
+                'Biceps': 'Biceps', 'Biceps Long Head': 'Biceps', 'Biceps Short Head': 'Biceps', 'Brachialis': 'Biceps',
+                'Front Delts': 'Shoulders', 'Side Delts': 'Shoulders', 'Shoulders': 'Shoulders',
+                'Rotator Cuff': 'Shoulders', 'Infraspinatus': 'Shoulders', 'Subscapularis': 'Shoulders',
+                'Rear Delts': 'Rear Delts',
+                'Forearms': 'Forearms', 'Forearm Flexors': 'Forearms', 'Forearm Extensors': 'Forearms',
+                'Grip': 'Forearms', 'Brachioradialis': 'Forearms', 'Wrist Flexors': 'Forearms',
+                'Quads': 'Quads',
+                'Hamstrings': 'Hamstrings', 'Biceps Femoris': 'Hamstrings',
+                'Glutes': 'Glutes', 'Glute Med': 'Glutes', 'Hip Abductors': 'Glutes', 'Adductors': 'Glutes',
+                'Hip Flexors': 'Hip Flexors', 'Iliacus': 'Hip Flexors', 'Psoas': 'Hip Flexors',
+                'Calves': 'Calves', 'Gastrocnemius': 'Calves', 'Soleus': 'Calves',
+                'Core': 'Core', 'Abs': 'Core', 'Obliques': 'Core', 'Deep Core': 'Core',
+                'Back': 'Lats' // generic 'Back' tag → Lats as primary
+            };
+
+            // Collect unique pool keys from muscles worked
+            const poolKeysNeeded = new Set();
+            musclesWorked.forEach(muscle => {
+                const key = muscleToPoolKey[muscle];
+                if (key) poolKeysNeeded.add(key);
+            });
+
+            // If nothing mapped, default to a sensible full-body set
+            if (poolKeysNeeded.size === 0) {
+                poolKeysNeeded.add('Chest');
+                poolKeysNeeded.add('Lats');
+                poolKeysNeeded.add('Quads');
+            }
+
+            const history = getStretchHistory();
+            const selected = [];
+            const usedNames = new Set();
+
+            // Priority order for ordering the final routine (big muscles first)
+            const displayOrder = ['Chest','Lats','Mid Back','Upper Back','Lower Back','Shoulders','Rear Delts',
+                                  'Triceps','Biceps','Forearms','Quads','Hamstrings','Glutes','Hip Flexors','Calves','Core'];
+
+            const orderedKeys = displayOrder.filter(k => poolKeysNeeded.has(k));
+
+            orderedKeys.forEach(key => {
+                const pool = stretchPool[key];
+                if (!pool) return;
+                // Score each stretch in this pool
+                const scored = pool
+                    .filter(s => !usedNames.has(s.name))
+                    .map(s => ({ stretch: s, score: getStretchScore(s.name, history) }))
+                    .sort((a, b) => b.score - a.score);
+                if (scored.length > 0) {
+                    selected.push(scored[0].stretch);
+                    usedNames.add(scored[0].stretch.name);
+                }
+            });
+
+            // Cap at 8 stretches maximum for session length
+            return selected.slice(0, 8);
+        }
+
         function goToStretches() {
-            // Check if this is a custom workout
-            const isCustomWorkout = currentWorkout.startsWith('custom_');
-            
+            const isCustomWorkout = currentWorkout.startsWith('custom_') || currentWorkout.startsWith('template_');
+
             if (isCustomWorkout) {
-                // For custom workouts, create a general stretch routine based on muscles worked
+                // Collect every muscle worked across all exercises in this session
                 const musclesWorked = new Set();
                 currentExercises.forEach(ex => {
-                    if (ex.muscles) {
-                        ex.muscles.forEach(m => musclesWorked.add(m));
-                    }
+                    // Check library for muscles if not on exercise object directly
+                    const libraryEx = exerciseLibrary ? exerciseLibrary.find(l => l.name === ex.name) : null;
+                    const muscles = ex.muscles || (libraryEx && libraryEx.muscles) || [];
+                    muscles.forEach(m => musclesWorked.add(m));
                 });
-                
-                // Build a stretch routine based on muscles worked
-                const customStretches = [];
-                
-                // Check for chest/push muscles
-                if (musclesWorked.has('Chest') || musclesWorked.has('Triceps') || musclesWorked.has('Shoulders')) {
-                    customStretches.push(
-                        { name: 'Doorway Chest Stretch', target: 'Chest & Shoulders', duration: 45, why: 'Opens up tight chest muscles from pressing movements.', instructions: ['Stand in doorway, place forearm on frame', 'Step forward until stretch felt in chest', 'Hold steady, breathe deeply'] },
-                        { name: 'Overhead Tricep Stretch', target: 'Triceps', duration: 30, bilateral: true, why: 'Releases tension in triceps from pressing and extensions.', instructions: ['Raise arm overhead, bend elbow behind head', 'Use other hand to gently guide elbow back', 'Feel stretch along back of upper arm'] }
-                    );
+
+                // Intelligently select stretches based on muscles worked + recency
+                const selected = selectStretchesForMuscles(musclesWorked);
+
+                // Fallback if nothing selected
+                if (selected.length === 0) {
+                    selected.push(...stretchPool['Chest'].slice(0,1));
+                    selected.push(...stretchPool['Lats'].slice(0,1));
+                    selected.push(...stretchPool['Quads'].slice(0,1));
                 }
-                
-                // Check for back/pull muscles
-                if (musclesWorked.has('Back') || musclesWorked.has('Lats') || musclesWorked.has('Biceps')) {
-                    customStretches.push(
-                        { name: 'Child\'s Pose Lat Stretch', target: 'Lats & Back', duration: 45, why: 'Stretches lats and lower back after pulling movements.', instructions: ['Kneel, sit back on heels', 'Extend arms forward on ground', 'Walk hands to each side for deeper stretch'] },
-                        { name: 'Cross-Body Shoulder Stretch', target: 'Rear Delts', duration: 30, bilateral: true, why: 'Releases posterior shoulder tension.', instructions: ['Bring arm across body at chest height', 'Use other hand to pull arm closer', 'Keep shoulders level'] }
-                    );
-                }
-                
-                // Check for leg muscles
-                if (musclesWorked.has('Quads') || musclesWorked.has('Hamstrings') || musclesWorked.has('Glutes') || musclesWorked.has('Calves')) {
-                    customStretches.push(
-                        { name: 'Standing Quad Stretch', target: 'Quadriceps', duration: 30, bilateral: true, why: 'Releases tight quads from squats and leg press.', instructions: ['Stand on one leg, grab ankle behind you', 'Pull heel toward glute', 'Keep knees together'] },
-                        { name: 'Seated Hamstring Stretch', target: 'Hamstrings', duration: 30, bilateral: true, why: 'Lengthens hamstrings after deadlifts and leg curls.', instructions: ['Sit with one leg extended', 'Reach toward toes', 'Keep back straight'] },
-                        { name: 'Hip Flexor Lunge', target: 'Hip Flexors', duration: 30, bilateral: true, why: 'Opens hip flexors that tighten during leg exercises.', instructions: ['Kneel on one knee', 'Push hips forward', 'Keep torso upright'] }
-                    );
-                }
-                
-                // Check for core
-                if (musclesWorked.has('Core') || musclesWorked.has('Abs')) {
-                    customStretches.push(
-                        { name: 'Cobra Stretch', target: 'Abs & Hip Flexors', duration: 30, why: 'Extends the spine and stretches abs after core work.', instructions: ['Lie face down, hands under shoulders', 'Press up, extending arms', 'Keep hips on ground'] }
-                    );
-                }
-                
-                // If no specific stretches, add general full-body stretches
-                if (customStretches.length === 0) {
-                    customStretches.push(
-                        { name: 'Full Body Stretch', target: 'General', duration: 45, why: 'General stretch for overall recovery.', instructions: ['Stand tall, reach arms overhead', 'Lean side to side', 'Touch toes if possible'] }
-                    );
-                }
-                
-                currentStretchRoutine = customStretches;
-                
-                // Update header for custom workout
+
+                // Record shown stretches for variety tracking
+                updateStretchHistory(selected.map(s => s.name));
+
+                currentStretchRoutine = selected;
+
+                // Dynamic header
+                const mins = selected.reduce((acc, s) => acc + (s.bilateral ? s.duration * 2 : s.duration), 0);
                 const stretchHeader = document.querySelector('#stretchScreen .header-title');
                 const stretchSubtitle = document.querySelector('#stretchScreen .header-subtitle');
                 if (stretchHeader) stretchHeader.textContent = 'Post-Workout Stretch';
-                if (stretchSubtitle) stretchSubtitle.textContent = `${customStretches.length} stretches · ${Math.ceil(customStretches.length * 1.5)} min`;
+                if (stretchSubtitle) stretchSubtitle.textContent = `${selected.length} stretches · ~${Math.ceil(mins / 60)} min`;
+
             } else {
-                // Set the correct stretch routine based on preset workout
+                // Preset workouts — use the quality-reviewed named arrays with variety injection
                 const stretchMap = {
                     'chest': stretches,
                     'back': backBicepsStretches,
@@ -9117,28 +9405,34 @@
                     'push': pushStretches,
                     'pull': pullStretches
                 };
-                currentStretchRoutine = stretchMap[currentWorkout];
-                
-                // Update header based on workout
+                const baseRoutine = stretchMap[currentWorkout] || fullBodyStretches;
+                // Every 3rd session, rotate 2 stretches with fresh alternatives from the pool
+                const routine = getVariedPresetRoutine(currentWorkout, baseRoutine);
+                currentStretchRoutine = routine;
+                incrementWorkoutStretchCount(currentWorkout);
+
+                // Track which stretches were shown for variety system
+                updateStretchHistory(routine.map(s => s.name));
+
                 const stretchHeader = document.querySelector('#stretchScreen .header-title');
                 const stretchSubtitle = document.querySelector('#stretchScreen .header-subtitle');
                 const headerMap = {
-                    'chest': { title: 'Post-Workout Stretch', subtitle: '7 stretches · 7 min' },
-                    'back': { title: 'Post-Back & Biceps Stretch', subtitle: '7 stretches · 7 min' },
-                    'legs': { title: 'Post-Legs Stretch', subtitle: '7 stretches · 7 min' },
-                    'shoulders': { title: 'Post-Shoulders & Arms Stretch', subtitle: '7 stretches · 7 min' },
-                    'fullbody': { title: 'Post-Full Body Stretch', subtitle: '5 stretches · 5 min' },
-                    'upper': { title: 'Post-Upper Body Stretch', subtitle: '5 stretches · 5 min' },
-                    'lower': { title: 'Post-Lower Body Stretch', subtitle: '5 stretches · 5 min' },
-                    'push': { title: 'Post-Push Day Stretch', subtitle: '4 stretches · 4 min' },
-                    'pull': { title: 'Post-Pull Day Stretch', subtitle: '4 stretches · 4 min' }
+                    'chest':     { title: 'Post-Chest & Triceps Stretch',  subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'back':      { title: 'Post-Back & Biceps Stretch',    subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'legs':      { title: 'Post-Legs Stretch',             subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'shoulders': { title: 'Post-Shoulders & Arms Stretch', subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'fullbody':  { title: 'Post-Full Body Stretch',        subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'upper':     { title: 'Post-Upper Body Stretch',       subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'lower':     { title: 'Post-Lower Body Stretch',       subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'push':      { title: 'Post-Push Day Stretch',         subtitle: `${routine.length} stretches · ~${routine.length} min` },
+                    'pull':      { title: 'Post-Pull Day Stretch',         subtitle: `${routine.length} stretches · ~${routine.length} min` }
                 };
                 if (stretchHeader && stretchSubtitle && headerMap[currentWorkout]) {
                     stretchHeader.textContent = headerMap[currentWorkout].title;
                     stretchSubtitle.textContent = headerMap[currentWorkout].subtitle;
                 }
             }
-            
+
             showScreen('stretchScreen');
             currentStretchIndex = 0;
             currentStretchSide = 0;
@@ -9370,7 +9664,7 @@
                     timeRemaining--;
                     document.getElementById('timerDisplay').textContent = timeRemaining;
 
-                    if (timeRemaining === 3) playWarningBeeps();
+                    if (timeRemaining === 4) playWarningBeeps();
 
                     if (timeRemaining <= 0) {
                         clearInterval(timerInterval);
@@ -9432,21 +9726,17 @@
         function completeStretch() {
             if (timerInterval) clearInterval(timerInterval);
             appState.stretchComplete = true;
-            appState.currentSession = 'nutrition';
-            showScreen('nutritionScreen');
-            renderMeals();
-            renderWater();
-            updateMacroDisplay();
+            appState.currentSession = 'none';
+            updateStreak();
+            showHome();
+            showToast('🧘 Great work — stretching complete!', 'success');
         }
         
         function skipStretches() {
             if (timerInterval) clearInterval(timerInterval);
             appState.stretchComplete = false;
-            appState.currentSession = 'nutrition';
-            showScreen('nutritionScreen');
-            renderMeals();
-            renderWater();
-            updateMacroDisplay();
+            appState.currentSession = 'none';
+            showHome();
         }
 
         function toggleFavorite() {
