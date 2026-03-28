@@ -598,116 +598,106 @@
         <!-- HOME SCREEN -->
         <div id="homeScreen" class="screen active">
             <div class="header">
-                <!-- Sets+ Logo - First thing at top -->
-                <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">
-                        <span style="color: white;">SETS</span><span style="color: var(--primary);">+</span>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 2px;" id="greetingText">Good morning,</div>
+                        <div style="font-size: 22px; font-weight: 800;" id="userName">Athlete</div>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-left: 12px; letter-spacing: 1px;">TRACK · STRETCH · GROW</div>
-                </div>
-                
-                <div class="header-top">
-                    <div onclick="editUserName()" style="cursor: pointer;">
-                        <div style="font-size: 14px; color: var(--text-secondary); margin-bottom: 4px;" id="greetingText">Good morning,</div>
-                        <div style="font-size: 20px; font-weight: 800;" id="userName">Athlete</div>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <div class="streak-badge" id="streakBadge">🔥 <span id="streakDisplay">0</span> days</div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="streak-badge" id="streakBadge">🔥 <span id="streakDisplay">0</span></div>
+                        <div style="font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">
+                            <span style="color: white;">SETS</span><span style="color: var(--primary);">+</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <div class="content">
-                <!-- Week Schedule (THE COMMAND CENTER) -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <h3 style="font-size: 18px; font-weight: 700;">This Week</h3>
-                    <div style="font-size: 12px; color: var(--text-muted);" id="weekDateRange"></div>
+                <!-- Week Schedule with forward/back navigation -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <button onclick="navigateWeek(-1)" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 8px;">‹</button>
+                    <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary);" id="weekDateRange"></div>
+                    <button onclick="navigateWeek(1)" style="background: none; border: none; color: var(--text-muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 8px;">›</button>
                 </div>
 
-                <div id="weekScheduleGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 24px;">
+                <div id="weekScheduleGrid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 16px;">
                     <!-- Dynamically rendered -->
                 </div>
 
-                <!-- Today's Focus (also handles resume state) -->
-                <div id="todaysFocusCard" style="background: linear-gradient(135deg, var(--primary), #e85a2a); border-radius: 20px; padding: 24px; margin-bottom: 24px;">
-                    <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 8px;" id="todaysFocusLabel">TODAY'S FOCUS</div>
-                    <div style="font-size: 28px; font-weight: 800; margin-bottom: 8px;" id="todayWorkoutName">Rest Day</div>
-                    <div style="font-size: 14px; opacity: 0.9; margin-bottom: 20px;" id="todayWorkoutDetails">You've earned it 💪</div>
-                    
-                    <button id="todayStartBtn" class="start-button" onclick="startTodaysWorkout()" style="display: none;">Let's Go 💪</button>
-                    <button id="todayResumeBtn" class="start-button" onclick="resumeSession()" style="display: none; background: linear-gradient(135deg, #00D9FF, #00b8cc);">Continue Workout →</button>
-                    
-                    <div id="todayRestMessage" style="text-align: center; padding: 20px 0; font-size: 15px; opacity: 0.9;">
-                        <div style="font-size: 48px; margin-bottom: 12px;">😴</div>
-                        <div>Tap a day above to plan a workout</div>
-                    </div>
+                <!-- New user prompt — shown when schedule is empty -->
+                <div id="newUserWeekPrompt" style="display: none; background: rgba(255,107,53,0.1); border: 1.5px dashed rgba(255,107,53,0.4); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; text-align: center;">
+                    <div style="font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 4px;">Plan your week</div>
+                    <div style="font-size: 13px; color: var(--text-secondary);">Tap any day above to schedule a workout</div>
                 </div>
 
-                <!-- AI Smart Suggestions -->
-                <div id="aiSuggestionsSection" style="margin-bottom: 24px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                        <h3 style="font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
-                            <span style="background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">✨ AI Coach</span>
-                        </h3>
-                        <button onclick="refreshAISuggestions()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">↻ Refresh</button>
-                    </div>
-                    <div id="aiSuggestionCard" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1)); border: 2px solid rgba(102, 126, 234, 0.3); border-radius: 16px; padding: 16px;">
-                        <div id="aiSuggestionContent">
-                            <!-- AI suggestions will be rendered here -->
+                <!-- Today's Focus — compact card -->
+                <div id="todaysFocusCard" style="background: linear-gradient(135deg, var(--primary), #e85a2a); border-radius: 16px; padding: 16px 20px; margin-bottom: 16px;">
+                    <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.85; margin-bottom: 4px;" id="todaysFocusLabel">TODAY'S FOCUS</div>
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
+                        <div>
+                            <div style="font-size: 20px; font-weight: 800; margin-bottom: 2px;" id="todayWorkoutName">Rest Day</div>
+                            <div style="font-size: 13px; opacity: 0.85;" id="todayWorkoutDetails">You've earned it 💪</div>
+                        </div>
+                        <div style="flex-shrink: 0;">
+                            <button id="todayStartBtn" onclick="startTodaysWorkout()" style="display: none; background: white; border: none; color: var(--primary); padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 800; cursor: pointer; white-space: nowrap;">Let's Go 💪</button>
+                            <button id="todayResumeBtn" onclick="resumeSession()" style="display: none; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.5); color: white; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap;">Continue →</button>
                         </div>
                     </div>
+                    <div id="todayRestMessage" style="display: none; font-size: 13px; opacity: 0.85; margin-top: 6px;">Tap a day above to plan a workout</div>
                 </div>
 
-                <!-- Recent Workouts - Quick Start -->
-                <div id="recentWorkoutsSection" style="margin-bottom: 24px; display: none;">
-                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700;">Quick Start</h3>
-                    <div id="recentWorkoutsList" style="display: flex; flex-direction: column; gap: 10px;">
-                        <!-- Populated by JS -->
+                <!-- AI Coach — compact, always visible above fold -->
+                <div id="aiSuggestionsSection" style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                            <span style="background: linear-gradient(135deg, #667eea, #764ba2); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">✨ AI Coach</span>
+                        </div>
+                        <button onclick="refreshAISuggestions()" style="background: none; border: none; color: var(--text-muted); font-size: 12px; cursor: pointer;">↻</button>
+                    </div>
+                    <div id="aiSuggestionCard" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08)); border: 1.5px solid rgba(102, 126, 234, 0.25); border-radius: 12px; padding: 12px 14px;">
+                        <div id="aiSuggestionContent"></div>
                     </div>
                 </div>
 
-                <!-- Muscle Recovery Status -->
-                <div id="recoverySection" style="margin-bottom: 20px; display: none;">
-                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700;">Recovery Status</h3>
-                    <div id="recoveryIndicators" style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <!-- Populated by JS -->
-                    </div>
+                <!-- Recent Workouts / Quick Start -->
+                <div id="recentWorkoutsSection" style="margin-bottom: 16px; display: none;">
+                    <h3 style="margin-bottom: 10px; font-size: 15px; font-weight: 700;">Quick Start</h3>
+                    <div id="recentWorkoutsList" style="display: flex; flex-direction: column; gap: 8px;"></div>
                 </div>
 
-                <!-- Quick Actions -->
-                <h3 style="margin-bottom: 16px; font-size: 18px; font-weight: 700;">Quick Actions</h3>
-                <div class="quick-actions" style="grid-template-columns: repeat(3, 1fr); gap: 10px;">
-                    <div class="action-card" onclick="showProgress()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">📊</div>
-                        <div class="action-label" style="font-size: 12px;">Progress</div>
-                    </div>
-                    <div class="action-card" onclick="showWorkoutHistory()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">📋</div>
-                        <div class="action-label" style="font-size: 12px;">History</div>
-                    </div>
-                    <div class="action-card" onclick="showNutrition()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">🥗</div>
-                        <div class="action-label" style="font-size: 12px;">Nutrition</div>
-                    </div>
-                    <div class="action-card" onclick="showStretch()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">🧘</div>
-                        <div class="action-label" style="font-size: 12px;">Stretches</div>
-                    </div>
-                    <div class="action-card" onclick="showVideoLibrary()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">🎬</div>
-                        <div class="action-label" style="font-size: 12px;">Form Videos</div>
-                    </div>
-                    <div class="action-card" onclick="showCustomBuilder()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">✏️</div>
-                        <div class="action-label" style="font-size: 12px;">Custom</div>
-                    </div>
-                    <div class="action-card" onclick="showTemplates()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">📋</div>
-                        <div class="action-label" style="font-size: 12px;">Templates</div>
-                    </div>
-                    <div class="action-card" onclick="showSettings()" style="padding: 16px;">
-                        <div class="action-icon" style="font-size: 24px;">⚙️</div>
-                        <div class="action-label" style="font-size: 12px;">Settings</div>
+                <!-- Recovery Status -->
+                <div id="recoverySection" style="margin-bottom: 16px; display: none;">
+                    <h3 style="margin-bottom: 10px; font-size: 15px; font-weight: 700;">Recovery Status</h3>
+                    <div id="recoveryIndicators" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+                </div>
+
+                <!-- Quick Actions — icon row, not card grid -->
+                <div id="quickActionsSection" style="margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-around; align-items: center; background: var(--surface); border-radius: 16px; padding: 14px 8px;">
+                        <button onclick="showProgress()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">📊</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">Progress</span>
+                        </button>
+                        <button onclick="showWorkoutHistory()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">📋</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">History</span>
+                        </button>
+                        <button onclick="showNutrition()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">🥗</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">Nutrition</span>
+                        </button>
+                        <button onclick="showStretch()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">🧘</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">Stretch</span>
+                        </button>
+                        <button onclick="showCustomBuilder()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">✏️</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">Custom</span>
+                        </button>
+                        <button onclick="showSettings()" style="background: none; border: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 48px;">
+                            <span style="font-size: 22px;">⚙️</span>
+                            <span style="font-size: 10px; color: var(--text-muted); font-weight: 600;">Settings</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -2331,8 +2321,8 @@
             <!-- Step 3: Body Stats (skippable) — was Step 2 -->
             <div id="onboardingStep3" class="onboarding-step" style="display: none;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 22px; font-weight: 800;">Set your nutrition targets</div>
-                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">We'll calculate your calories & macros.<br>You can always skip and set manually in Settings.</div>
+                    <div style="font-size: 22px; font-weight: 800;">About You</div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">We'll calculate your calories & macros.<br>Skip anytime and set manually in Settings.</div>
                 </div>
 
                 <div style="background: rgba(255, 107, 53, 0.1); border: 1px solid rgba(255, 107, 53, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 16px;">
@@ -2450,41 +2440,43 @@
             <!-- Step 5: Pick First Workout — was Step 4 -->
             <div id="onboardingStep5" class="onboarding-step" style="display: none;">
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 36px; margin-bottom: 10px;">🚀</div>
+                    <div style="font-size: 30px; font-weight: 900; letter-spacing: -1px; margin-bottom: 8px;">
+                        <span style="color: white;">SETS</span><span style="color: var(--primary);">+</span>
+                    </div>
                     <div style="font-size: 22px; font-weight: 800;" id="ob5Title">Ready, let's go!</div>
                     <div style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">Pick your first workout to start right now</div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px;">
-                    <button onclick="completeOnboarding('chest')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">🏋️</div>
-                        <div style="font-size: 14px; font-weight: 700;">Chest & Triceps</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Bench · Flyes · Dips</div>
+                    <button onclick="completeOnboarding('chest')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">🫸</div>
+                        <div style="font-size: 13px; font-weight: 700;">Chest & Triceps</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Bench · Flyes · Dips</div>
                     </button>
-                    <button onclick="completeOnboarding('back')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">🦾</div>
-                        <div style="font-size: 14px; font-weight: 700;">Back & Biceps</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Rows · Pull-ups · Curls</div>
+                    <button onclick="completeOnboarding('back')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">🫷</div>
+                        <div style="font-size: 13px; font-weight: 700;">Back & Biceps</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Rows · Pull-ups · Curls</div>
                     </button>
-                    <button onclick="completeOnboarding('legs')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">🦵</div>
-                        <div style="font-size: 14px; font-weight: 700;">Legs</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Squats · Press · Curls</div>
+                    <button onclick="completeOnboarding('legs')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">🏃</div>
+                        <div style="font-size: 13px; font-weight: 700;">Legs</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Squats · Press · Curls</div>
                     </button>
-                    <button onclick="completeOnboarding('shoulders')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">💪</div>
-                        <div style="font-size: 14px; font-weight: 700;">Shoulders & Arms</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Press · Raises · Curls</div>
+                    <button onclick="completeOnboarding('shoulders')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">🎯</div>
+                        <div style="font-size: 13px; font-weight: 700;">Shoulders & Arms</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Press · Raises · Curls</div>
                     </button>
-                    <button onclick="completeOnboarding('fullbody')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
-                        <div style="font-size: 14px; font-weight: 700;">Full Body</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Hit everything</div>
+                    <button onclick="completeOnboarding('fullbody')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">⚡</div>
+                        <div style="font-size: 13px; font-weight: 700;">Full Body</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Hit everything</div>
                     </button>
-                    <button onclick="completeOnboarding('push')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: left; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
-                        <div style="font-size: 28px; margin-bottom: 8px;">🔼</div>
-                        <div style="font-size: 14px; font-weight: 700;">Push Day</div>
-                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;">Chest · Shoulders · Tris</div>
+                    <button onclick="completeOnboarding('push')" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-primary); border-radius: 14px; padding: 16px 12px; cursor: pointer; text-align: center; transition: border-color 0.2s;" onmouseenter="this.style.borderColor='var(--primary)'" onmouseleave="this.style.borderColor='var(--border)'">
+                        <div style="font-size: 26px; margin-bottom: 6px;">📈</div>
+                        <div style="font-size: 13px; font-weight: 700;">Push Day</div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">Chest · Shoulders · Tris</div>
                     </button>
                 </div>
 
@@ -4618,16 +4610,21 @@
             // Check for saved workout session
             const savedSession = loadWorkoutSession();
             if (savedSession && savedSession.currentExercises) {
-                // There's an active workout - set state accordingly
                 appState.currentSession = 'workout';
                 currentWorkout = savedSession.currentWorkout;
             } else {
-                // No active session
                 appState.currentSession = 'none';
             }
             
             // Render week schedule
             renderWeekSchedule();
+
+            // Show new-user prompt if schedule is entirely empty
+            const prompt = document.getElementById('newUserWeekPrompt');
+            if (prompt) {
+                const hasAnyWorkout = Object.values(weekSchedule).some(v => v && v !== 'rest');
+                prompt.style.display = hasAnyWorkout ? 'none' : 'block';
+            }
             
             // Update today's focus card (handles resume state too)
             updateTodaysFocus();
@@ -4954,11 +4951,21 @@
         
         let selectedScheduleDay = null;
         
+        let weekViewOffset = 0; // 0 = this week, -1 = last week, 1 = next week
+
+        function navigateWeek(direction) {
+            weekViewOffset += direction;
+            renderWeekSchedule();
+            // Only update Today's Focus if viewing current week
+            const todayFocusCard = document.getElementById('todaysFocusCard');
+            if (todayFocusCard) todayFocusCard.style.opacity = weekViewOffset === 0 ? '1' : '0.5';
+        }
+
         function getWeekDates() {
             const today = new Date();
             const dayOfWeek = today.getDay();
             const monday = new Date(today);
-            monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+            monday.setDate(today.getDate() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) + (weekViewOffset * 7));
             
             const dates = [];
             for (let i = 0; i < 7; i++) {
@@ -5744,33 +5751,18 @@
                 resumeBtn.style.display = 'none';
                 restMsg.style.display = 'none';
             } else if (info.isRest) {
-                // Rest day with recovery suggestions
                 card.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
-                labelEl.textContent = "ACTIVE RECOVERY";
+                labelEl.textContent = 'ACTIVE RECOVERY';
                 nameEl.textContent = 'Rest Day';
-                detailsEl.textContent = "Recovery is when you grow stronger 💪";
+                detailsEl.textContent = 'Recovery is when you grow stronger 💪';
                 startBtn.style.display = 'none';
                 resumeBtn.style.display = 'none';
                 
-                // Get recovery tips based on recent workouts
                 const recoveryTips = getRestDaySuggestions();
-                
                 restMsg.innerHTML = `
-                    <div style="text-align: left; padding: 0;">
-                        <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.8); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 1px;">Suggested Today</div>
-                        ${recoveryTips.map(tip => `
-                            <div style="background: rgba(255,255,255,0.1); border-radius: 12px; padding: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px;">
-                                <span style="font-size: 24px;">${tip.emoji}</span>
-                                <div>
-                                    <div style="font-weight: 700; font-size: 14px;">${tip.title}</div>
-                                    <div style="font-size: 12px; opacity: 0.8;">${tip.desc}</div>
-                                </div>
-                            </div>
-                        `).join('')}
-                        <button onclick="showRestDayActivities()" style="width: 100%; margin-top: 12px; padding: 14px; background: rgba(255,255,255,0.25); border: 2px solid rgba(255,255,255,0.4); color: white; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer;">
-                            🧘 Open Recovery Activities
-                        </button>
-                    </div>
+                    <button onclick="showRestDayActivities()" style="margin-top: 8px; padding: 7px 14px; background: rgba(255,255,255,0.2); border: 1.5px solid rgba(255,255,255,0.4); color: white; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                        🧘 Recovery Activities →
+                    </button>
                 `;
                 restMsg.style.display = 'block';
             } else {
@@ -5782,13 +5774,7 @@
                 if (info.isCardio || info.isYoga) {
                     detailsEl.textContent = `~${info.time} min session`;
                 } else {
-                    detailsEl.innerHTML = `
-                        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-                            <span>${info.emoji} ${info.exercises} exercises</span>
-                            <span>🔥 ${info.sets} sets</span>
-                            <span>⏱️ ~${info.time} min</span>
-                        </div>
-                    `;
+                    detailsEl.textContent = `${info.emoji} ${info.exercises} exercises · ~${info.time} min`;
                 }
                 
                 startBtn.style.display = 'block';
@@ -5914,73 +5900,69 @@
                 return `
                 ${supersetHeader}
                 <div class="exercise-card" style="${cardStyle}">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
-                        <div style="flex: 1;">
-                            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-                                <span onclick="showExerciseInfo(${exIndex})" class="exercise-name" style="cursor: pointer;">${ex.name}</span>
-                                <span onclick="showExerciseInfo(${exIndex})" style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: var(--accent); color: white; border-radius: 50%; font-size: 12px; font-weight: 700; font-style: italic; font-family: Georgia, serif;">i</span>
-                                <button onclick="showSwapOptions(${exIndex})" style="background: var(--surface); border: 2px solid var(--border); color: var(--text-muted); padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
-                                    🔄 Swap
-                                </button>
-                            </div>
-                            <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;">
-                                ${injuryBadge || ''}
-                                ${prBadge || ''}
-                                ${progressionBadge || ''}
-                                ${progressBadge || ''}
-                            </div>
+                    <!-- Exercise name row -->
+                    <div style="margin-bottom: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                            <span onclick="showExerciseInfo(${exIndex})" class="exercise-name" style="cursor: pointer; flex: 1;">${ex.name}</span>
+                            <button onclick="showExerciseInfo(${exIndex})" style="cursor: pointer; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; background: var(--surface-light); border: 1.5px solid var(--border); color: var(--text-secondary); border-radius: 50%; font-size: 12px; font-weight: 700; font-style: italic; font-family: Georgia, serif; flex-shrink: 0;" title="Exercise info">i</button>
                         </div>
-                        <div style="display: flex; gap: 8px; align-items: center;">
-                            <button onclick="adjustNumSets(${exIndex}, -1)" style="background: var(--surface-light); border: 2px solid var(--border); color: var(--text-primary); width: 28px; height: 28px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
-                            <div style="font-size: 13px; color: var(--text-secondary); min-width: 50px; text-align: center;">
-                                ${completedSets}/${totalSets} sets
-                            </div>
-                            <button onclick="adjustNumSets(${exIndex}, 1)" style="background: var(--surface-light); border: 2px solid var(--border); color: var(--text-primary); width: 28px; height: 28px; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
+                        <!-- Badges — priority order: injury first, then PR, then progression, then progress -->
+                        <div style="display: flex; flex-wrap: wrap; gap: 5px; align-items: center;">
+                            ${injuryBadge || ''}
+                            ${prBadge || ''}
+                            ${progressionBadge || ''}
+                            ${progressBadge || ''}
                         </div>
+                    </div>
+                    <!-- Controls row: swap + set count -->
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--border);">
+                        <button onclick="showSwapOptions(${exIndex})" style="background: var(--surface-light); border: 1.5px solid var(--border); color: var(--text-secondary); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                            🔄 Swap
+                        </button>
+                        <div style="flex: 1;"></div>
+                        <button onclick="adjustNumSets(${exIndex}, -1)" style="background: var(--surface-light); border: 1.5px solid var(--border); color: var(--text-primary); width: 32px; height: 32px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">−</button>
+                        <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); min-width: 52px; text-align: center;">
+                            ${completedSets}/${totalSets} sets
+                        </div>
+                        <button onclick="adjustNumSets(${exIndex}, 1)" style="background: var(--surface-light); border: 1.5px solid var(--border); color: var(--text-primary); width: 32px; height: 32px; border-radius: 8px; font-size: 16px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center;">+</button>
                     </div>
                     
                     ${ex.sets.map((set, setIndex) => `
-                        <div style="background: ${set.completed ? 'rgba(6, 214, 160, 0.1)' : 'var(--surface-light)'}; border: 2px solid ${set.completed ? 'var(--success)' : 'var(--border)'}; border-radius: 12px; padding: 12px; margin-bottom: 8px;">
+                        <div style="background: ${set.completed ? 'rgba(6, 214, 160, 0.08)' : 'var(--surface-light)'}; border: 1.5px solid ${set.completed ? 'var(--success)' : 'var(--border)'}; border-radius: 10px; padding: 10px 12px; margin-bottom: 6px;">
                             
-                            <!-- Row 1: Summary + Completion Button -->
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px;">
-                                <div style="font-size: 14px; font-weight: 700; color: ${set.completed ? 'var(--success)' : 'var(--text-secondary)'}; min-width: 50px;">
+                            <!-- Row 1: Set label + summary + note + done -->
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <div style="font-size: 13px; font-weight: 700; color: ${set.completed ? 'var(--success)' : 'var(--text-secondary)'}; min-width: 38px;">
                                     Set ${setIndex + 1}
-                                    ${set.completed && set.rpe ? `<span style="margin-left: 4px; font-size: 11px; font-weight: 800; color: ${set.rpe <= 4 ? '#06D6A0' : set.rpe <= 6 ? '#FFD166' : set.rpe <= 8 ? '#FF6B35' : '#EF476F'}; background: ${set.rpe <= 4 ? 'rgba(6,214,160,0.15)' : set.rpe <= 6 ? 'rgba(255,209,102,0.15)' : set.rpe <= 8 ? 'rgba(255,107,53,0.15)' : 'rgba(239,71,111,0.15)'}; padding: 2px 6px; border-radius: 6px;">RPE ${set.rpe}</span>` : ''}
                                 </div>
                                 
-                                ${!ex.isBodyweight ? `
-                                    <div style="flex: 1; font-size: 16px; font-weight: 700; color: var(--text-primary);">
-                                        ${set.weight}kg × ${set.reps} ${ex.isTimeBased ? 'sec' : 'reps'}
-                                    </div>
-                                ` : `
-                                    <div style="flex: 1; font-size: 16px; font-weight: 700; color: var(--text-primary);">
-                                        ${set.reps} ${ex.isTimeBased ? 'sec' : 'reps'}
-                                    </div>
-                                `}
+                                <div id="set-summary-${exIndex}-${setIndex}" style="flex: 1; font-size: 15px; font-weight: 700; color: var(--text-primary);">
+                                    ${!ex.isBodyweight ? `${set.weight}kg × ${set.reps} ${ex.isTimeBased ? 'sec' : 'reps'}` : `${set.reps} ${ex.isTimeBased ? 'sec' : 'reps'}`}
+                                </div>
+
+                                ${set.completed && set.rpe ? `<span style="font-size: 10px; font-weight: 800; color: ${set.rpe <= 4 ? '#06D6A0' : set.rpe <= 6 ? '#FFD166' : set.rpe <= 8 ? '#FF6B35' : '#EF476F'}; background: ${set.rpe <= 4 ? 'rgba(6,214,160,0.15)' : set.rpe <= 6 ? 'rgba(255,209,102,0.15)' : set.rpe <= 8 ? 'rgba(255,107,53,0.15)' : 'rgba(239,71,111,0.15)'}; padding: 2px 5px; border-radius: 5px; flex-shrink: 0;">RPE ${set.rpe}</span>` : ''}
                                 
-                                <!-- Note Button -->
                                 <button onclick="openSetNote(${exIndex}, ${setIndex})" 
-                                        style="background: ${set.note ? 'rgba(255, 209, 102, 0.2)' : 'var(--surface)'}; border: 2px solid ${set.note ? '#FFD166' : 'var(--border)'}; color: ${set.note ? '#FFD166' : 'var(--text-secondary)'}; width: 36px; height: 36px; border-radius: 8px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                        style="background: ${set.note ? 'rgba(255, 209, 102, 0.2)' : 'transparent'}; border: 1.5px solid ${set.note ? '#FFD166' : 'var(--border)'}; color: ${set.note ? '#FFD166' : 'var(--text-muted)'}; width: 32px; height: 32px; border-radius: 7px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     ${set.note ? '📝' : '✏️'}
                                 </button>
                                 
                                 <button onclick="toggleSet(${exIndex}, ${setIndex})" 
-                                        style="background: ${set.completed ? 'var(--success)' : 'var(--primary)'}; border: 2px solid ${set.completed ? 'var(--success)' : 'var(--primary)'}; color: white; min-width: ${set.completed ? '44px' : '60px'}; height: 44px; border-radius: 10px; font-size: ${set.completed ? '20px' : '13px'}; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 0 ${set.completed ? '0' : '12px'};">
+                                        style="background: ${set.completed ? 'var(--success)' : 'var(--primary)'}; border: none; color: white; width: ${set.completed ? '44px' : '56px'}; height: 44px; border-radius: 10px; font-size: ${set.completed ? '18px' : '13px'}; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                                     ${set.completed ? '✓' : 'Done'}
                                 </button>
                             </div>
                             
                             <!-- Note Display (if exists) -->
                             ${set.note ? `
-                                <div style="margin-top: 8px; padding: 8px 12px; background: rgba(255, 209, 102, 0.1); border-radius: 8px; font-size: 13px; color: var(--text-primary);">
+                                <div style="margin-top: 6px; padding: 6px 10px; background: rgba(255, 209, 102, 0.1); border-radius: 7px; font-size: 12px; color: var(--text-primary);">
                                     💬 ${set.note}
                                 </div>
                             ` : ''}
                             
-                            <!-- Row 2: Adjustment Controls (only show when not completed) -->
+                            <!-- Row 2: Adjustment Controls (only when not completed) -->
                             ${!set.completed ? `
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border);">
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
                                     ${!ex.isBodyweight ? `
                                         <div>
                                             <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">Weight</div>
@@ -9536,17 +9518,22 @@
                         <p style="font-size: 16px; color: var(--text-secondary);">Great work on your recovery routine</p>
                     </div>
                 `;
+                completeStretch();
                 return;
             }
 
             const stretch = currentStretchRoutine[currentStretchIndex];
-            const sideLabel = (stretch.bilateral && currentStretchSide === 0) ? ' (Left Side)' : 
-                             (stretch.bilateral && currentStretchSide === 1) ? ' (Right Side)' : '';
+            // Side label belongs on the button only — not the title (prevents overflow)
+            const sideLabel = (stretch.bilateral && currentStretchSide === 0) ? 'Left Side' : 
+                             (stretch.bilateral && currentStretchSide === 1) ? 'Right Side' : '';
+            const sideIndicator = sideLabel
+                ? `<span style="display: inline-block; margin-left: 8px; background: var(--primary); color: white; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; vertical-align: middle;">${sideLabel}</span>`
+                : '';
 
             document.getElementById('stretchContent').innerHTML = `
                 <div class="stretch-card">
                     <div class="stretch-number">Stretch ${currentStretchIndex + 1} of ${currentStretchRoutine.length}</div>
-                    <div class="stretch-name">${stretch.name}${sideLabel}</div>
+                    <div class="stretch-name">${stretch.name}${sideIndicator}</div>
                     <div class="stretch-target">Target: ${stretch.target}</div>
 
                     <div class="science-card">
@@ -9561,10 +9548,16 @@
                         </ul>
                     </div>
 
+                    ${stretch.caution ? `
+                        <div style="background: rgba(255,107,53,0.1); border: 1.5px solid rgba(255,107,53,0.4); border-radius: 10px; padding: 12px; margin-bottom: 16px; font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
+                            ⚠️ ${stretch.caution}
+                        </div>
+                    ` : ''}
+
                     <div class="action-buttons">
                         <button class="btn btn-secondary" onclick="skipStretch()">Skip</button>
                         <button class="btn btn-primary" onclick="startCountdown()">
-                            Start${sideLabel} →
+                            ${sideLabel ? 'Start ' + sideLabel + ' →' : 'Start →'}
                         </button>
                     </div>
                 </div>
@@ -9626,7 +9619,7 @@
 
             document.getElementById('stretchContent').innerHTML = `
                 <div class="stretch-card">
-                    <div class="stretch-number">Holding: ${stretch.name}${sideLabel}</div>
+                    <div class="stretch-number">Holding: ${stretch.name}${sideLabel ? ' — ' + sideLabel : ''}</div>
 
                     <div class="timer-section">
                         <div class="timer-label">Hold For</div>
@@ -9638,18 +9631,18 @@
                         </div>
                     </div>
 
-                    <div class="action-buttons">
-                        <button class="btn btn-secondary" onclick="skipCurrentStretch()">Skip</button>
-                        <button class="btn btn-primary" onclick="completeCurrentStretch()">
-                            ${(stretch.bilateral && currentStretchSide === 0) ? 'Switch to Right →' : 'Next Stretch →'}
-                        </button>
-                    </div>
-
                     <div class="instructions">
                         <div class="instructions-title">Remember:</div>
                         <ul class="instructions-list">
                             ${stretch.instructions.slice(0, 3).map(i => `<li>${i}</li>`).join('')}
                         </ul>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-secondary" onclick="skipCurrentStretch()">Skip</button>
+                        <button class="btn btn-primary" onclick="completeCurrentStretch()">
+                            ${(stretch.bilateral && currentStretchSide === 0) ? 'Switch to Right →' : 'Next Stretch →'}
+                        </button>
                     </div>
                 </div>
             `;
