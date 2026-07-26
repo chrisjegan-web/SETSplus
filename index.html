@@ -437,14 +437,6 @@
         .wk-card-meta { font-size: 12px; color: var(--text-muted); }
         .wk-card-arrow { font-size: 20px; color: var(--text-muted); flex-shrink: 0; }
 
-        .week-nav-btn {
-            background: none; border: none; color: var(--text-muted);
-            font-size: 22px; width: 44px; height: 44px;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: var(--radius-sm);
-        }
-        .week-range { font-size: 12px; font-weight: 600; color: var(--text-sec); }
-
         .today-header { position: relative; }
         .settings-gear {
             position: absolute; right: 4px; top: 50%; transform: translateY(-50%);
@@ -1079,6 +1071,10 @@
         .empty-body { font-size: 13px; color: var(--text-sec); line-height: 1.6; max-width: 260px; margin: 0 auto 24px; }
         /* ── PLAN GRID ───────────────────────────────────────────────────────── */
         .agenda { display: flex; flex-direction: column; gap: 8px; }
+        .week-sep { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); padding: 14px 4px 4px; }
+        .week-sep--now { color: var(--success); }
+        #plan-today { scroll-margin-top: 12px; }
+        .plan-tools { margin-top: 18px; }
         .agenda-row { display: flex; gap: 14px; align-items: flex-start; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; position: relative; -webkit-tap-highlight-color: transparent; }
         .agenda-row:active { background: var(--surface-mid); }
         .agenda-row--today { border: 2px solid var(--success); }
@@ -1307,7 +1303,6 @@ const S = {
     userName:         localStorage.getItem('sp_name') || 'Athlete',
     streak:           parseInt(localStorage.getItem('sp_streak') || '0'),
     prsThisWeek:      parseInt(localStorage.getItem('sp_prs_week') || '0'),
-    weekOffset:       0,
 
     // Preferences the user can actually change (Settings). Defaults are my best
     // guess; these make them dials rather than hardcoded assumptions.
@@ -4869,45 +4864,58 @@ function runTone(freq, ms) {
 const DAY_NAMES   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function planDays() {
-    const today  = new Date();
-    const dow    = today.getDay();
-    const monday = new Date(today);
-    monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1) + (S.weekOffset * 14));
-    return Array.from({ length: 14 }, (_, i) => {
-        const d = new Date(monday); d.setDate(monday.getDate() + i); return d;
+function mondayOf(d) {
+    const m = new Date(d); const dow = m.getDay();
+    m.setDate(m.getDate() - (dow === 0 ? 6 : dow - 1)); m.setHours(0,0,0,0); return m;
+}
+// A continuous span of days: from the Monday of last week (a little history to
+// scroll back through) out to at least 8 weeks ahead, extended to cover the
+// furthest planned day (so an imported program is fully visible).
+function planRange() {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const start = mondayOf(today); start.setDate(start.getDate() - 7);
+    let endMs = today.getTime() + 56 * 86400000;
+    Object.keys(S.plan).forEach(k => {
+        const t = new Date(k + 'T00:00:00').getTime();
+        if (getBlocks(k).length && t > endMs) endMs = t;
     });
+    const end = mondayOf(new Date(endMs)); end.setDate(end.getDate() + 6);   // finish the week
+    const days = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) days.push(new Date(d));
+    return days;
 }
 
-function renderPlan() {
+function renderPlan(anchorToday) {
     const today    = new Date();
     const todayStr = today.toDateString();
-    const days     = planDays();
-    const label = d => `${DAY_NAMES[d.getDay()]} ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+    const days     = planRange();
+    const monToday = mondayOf(today).getTime();
 
-    const rows = days.map(d => {
+    let out = '', lastWeek = null;
+    days.forEach(d => {
         const key     = dateKey(d);
+        const wk      = Math.round((mondayOf(d).getTime() - monToday) / (7 * 86400000));
+        if (wk !== lastWeek) {
+            lastWeek = wk;
+            const label = wk === 0 ? 'This week' : wk === 1 ? 'Next week' : wk === -1 ? 'Last week'
+                        : `Week of ${d.getDate()} ${MONTH_SHORT[d.getMonth()]}`;
+            out += `<div class="week-sep ${wk === 0 ? 'week-sep--now' : ''}">${label}</div>`;
+        }
         const blocks  = getBlocks(key);
         const isToday = d.toDateString() === todayStr;
         const allDone = blocks.length > 0 && blocks.every(b => b.done || b.type === 'rest');
 
-        let items;
-        if (!blocks.length) {
-            items = `<div class="agenda-empty">+ Tap to add</div>`;
-        } else {
-            // Every block, in the order it's planned — walk, lift, run, stretch.
-            items = blocks.map(b => {
-                const m = blockMeta(b);
-                const sub = (b.type === 'cardio' && b.week) ? `W${b.week} D${b.day}` : '';
-                return `<div class="agenda-item ${b.done ? 'agenda-item--done' : ''}">
-                    <span class="agenda-item-icon">${m.icon}</span>
-                    <span class="agenda-item-name">${blockName(b)}</span>
-                    ${sub ? `<span class="agenda-item-sub">${sub}</span>` : ''}
-                </div>`;
-            }).join('');
-        }
+        const items = blocks.length ? blocks.map(b => {
+            const m = blockMeta(b);
+            const sub = (b.type === 'cardio' && b.week) ? `W${b.week} D${b.day}` : '';
+            return `<div class="agenda-item ${b.done ? 'agenda-item--done' : ''}">
+                <span class="agenda-item-icon">${m.icon}</span>
+                <span class="agenda-item-name">${blockName(b)}</span>
+                ${sub ? `<span class="agenda-item-sub">${sub}</span>` : ''}
+            </div>`;
+        }).join('') : `<div class="agenda-empty">+ Tap to add</div>`;
 
-        return `<div class="agenda-row ${isToday ? 'agenda-row--today' : ''} ${allDone && !isToday ? 'agenda-row--done' : ''}" onclick="openDaySheet('${key}')">
+        out += `<div class="agenda-row ${isToday ? 'agenda-row--today' : ''} ${allDone && !isToday ? 'agenda-row--done' : ''}"${isToday ? ' id="plan-today"' : ''} onclick="openDaySheet('${key}')">
             <div class="agenda-date">
                 <div class="agenda-dow ${isToday ? 'agenda-dow--today' : ''}">${DAY_NAMES[d.getDay()]}</div>
                 <div class="agenda-num">${d.getDate()}</div>
@@ -4915,21 +4923,27 @@ function renderPlan() {
             <div class="agenda-items">${items}</div>
             ${allDone && !isToday ? '<div class="agenda-check">✓</div>' : ''}
         </div>`;
-    }).join('');
+    });
+
+    const screen = document.getElementById('screen-plan');
+    const prevScroll = screen ? screen.scrollTop : 0;
 
     document.getElementById('plan-content').innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <button class="week-nav-btn" onclick="navWeek(-1)">‹</button>
-            <div class="week-range">${label(days[0])} — ${label(days[13])}</div>
-            <button class="week-nav-btn" onclick="navWeek(1)">›</button>
-        </div>
-        <div class="agenda">${rows}</div>
-        <button class="mini-btn-wide" style="margin-top:14px;" onclick="openRepeat(null,null)">
-            <span class="mini-btn-icon">↻</span> Repeat a session across days
-        </button>
-        ${Object.keys(S.plan).length ? `<button class="plan-clear-link" onclick="openClearPlan()">Clear from plan…</button>` : ''}`;
+        <div class="agenda">${out}</div>
+        <div class="plan-tools">
+            <button class="mini-btn-wide" onclick="openRepeat(null,null)"><span class="mini-btn-icon">↻</span> Repeat a session across days</button>
+            ${Object.keys(S.plan).length ? `<button class="plan-clear-link" onclick="openClearPlan()">Clear from plan…</button>` : ''}
+        </div>`;
+
+    // On open, land on today (past sits above, scrollable up). On in-place
+    // re-renders (add/remove a block) keep the scroll where it was — don't snap.
+    if (anchorToday) {
+        const row = document.getElementById('plan-today');
+        if (row && row.scrollIntoView) row.scrollIntoView({ block: 'start' });
+    } else if (screen) {
+        screen.scrollTop = prevScroll;
+    }
 }
-function navWeek(dir) { S.weekOffset += dir; renderPlan(); }
 
 // ── DAY SHEET — build the day ────────────────────────────────────────────────
 // Tap a thing, it appends. That's it. Reorder with ▲▼ if you got it wrong,
@@ -5389,7 +5403,7 @@ function switchTab(id) {
     if (id === 'lift')    renderLift();
     if (id === 'run')     renderRun();
     if (id === 'stretch') renderStretch();
-    if (id === 'plan')    renderPlan();
+    if (id === 'plan')    renderPlan(true);
 }
 
 // ── TOAST ─────────────────────────────────────────────────────────────────────
